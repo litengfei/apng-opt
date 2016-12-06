@@ -1,10 +1,40 @@
 apply plugin: 'java'
 
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "com.github.jengelman.gradle.plugins:shadow:1.2.3"
+    }
+}
+apply plugin: 'com.github.johnrengelman.shadow'
+
 repositories {
-    jcenter()
+    mavenCentral()
 }
 
 dependencies {
-    //compile 'org.slf4j:slf4j-api:1.7.21'
-    //testCompile 'junit:junit:4.12'
+    compile 'commons-io:commons-io:2.4'
+    compile 'org.apache.httpcomponents:httpclient:4.4.1'
+    compile 'com.alibaba:fastjson:1.2.12'
+
+    // logging
+    compile 'org.slf4j:slf4j-parent:1.7.21'
+    compile 'org.slf4j:jcl-over-slf4j:1.7.21'
+    compile 'ch.qos.logback:logback-classic:1.1.7'
+
+    // test
+    testCompile 'org.testng:testng:6.8'
+    testCompile 'org.codehaus.groovy:groovy-testng:2.4.7'
+}
+
+test.useTestNG()
+
+shadowJar {
+    archiveName "apngopt.jar";
+
+    manifest {
+        attributes("Main-Class": "li.tengfei.apng.opt.Runner")
+    }
 }
