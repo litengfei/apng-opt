@@ -4,6 +4,7 @@ import li.tengfei.apng.base.ApngConst;
 import li.tengfei.apng.base.ApngMmapParserChunk;
 import li.tengfei.apng.base.FormatNotSupportException;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
@@ -16,12 +17,16 @@ import java.util.ArrayList;
  * @author ltf
  * @since 16/12/6, 下午4:48
  */
-public class RebuildApngReader {
+public class PngReader {
     private MappedByteBuffer mBuffer;
     private ApngMmapParserChunk mChunk;
 
 
-    public RebuildApngReader(String apngFile) throws IOException, FormatNotSupportException {
+    public PngReader(String apngFile) throws IOException, FormatNotSupportException {
+        this(new File(apngFile));
+    }
+
+    public PngReader(File apngFile) throws IOException, FormatNotSupportException {
         RandomAccessFile f = new RandomAccessFile(apngFile, "r");
         mBuffer = f.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, f.length());
         f.close();
@@ -32,7 +37,9 @@ public class RebuildApngReader {
         }
     }
 
-
+    /**
+     * get chunks list of a png file
+     */
     public ArrayList<PngChunkData> getChunks() throws IOException {
         mChunk = new ApngMmapParserChunk(mBuffer);
         // locate IHDR
@@ -47,5 +54,14 @@ public class RebuildApngReader {
         }
 
         return chunks;
+    }
+
+    /**
+     * get png data of a png file
+     */
+    public PngData getPngData() throws IOException {
+        PngData pngData = new PngData();
+        pngData.chunks = getChunks();
+        return pngData;
     }
 }

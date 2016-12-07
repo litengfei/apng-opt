@@ -13,10 +13,14 @@ import java.util.ArrayList;
  */
 public class ApngRebuilder {
 
+    private PngData mApngData;
+
+    private ArrayList<PngData> mFrameData;
+
     public boolean rebuild(String srcApngFile, String shrinkedImgsDir, String outFile) {
         try {
-            RebuildApngReader apngReader = new RebuildApngReader(srcApngFile);
-//            ArrayList<PngChunkData>
+            mApngData = new PngReader(srcApngFile).getPngData();
+            mFrameData = new PngsCollector().getPngs(shrinkedImgsDir);
 
 
             return true;
