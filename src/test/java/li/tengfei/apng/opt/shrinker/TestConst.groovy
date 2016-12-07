@@ -1,7 +1,7 @@
-package li.tengfei.apng.opt.optimizer
+package li.tengfei.apng.opt.shrinker
 
 /**
- * Global Test Constant
+ *
  *
  * @author ltf
  * @since 16/12/6, 下午3:58

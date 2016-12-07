@@ -1,4 +1,4 @@
-package li.tengfei.apng.opt.optimizer;
+package li.tengfei.apng.opt.shrinker;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -17,7 +17,7 @@ import java.io.*;
  * @author ltf
  * @since 16/12/5, 下午5:07
  */
-public class TinypngOptimizer implements Optimizer {
+public class TinypngShrinker implements Shrinker {
     @Override
     public boolean optimize(InputStream in, OutputStream out) {
         try {

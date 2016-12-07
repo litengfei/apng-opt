@@ -4,11 +4,7 @@ buildscript {
     repositories {
         mavenCentral()
     }
-    dependencies {
-        classpath "com.github.jengelman.gradle.plugins:shadow:1.2.3"
-    }
 }
-apply plugin: 'com.github.johnrengelman.shadow'
 
 repositories {
     mavenCentral()
@@ -24,17 +20,24 @@ dependencies {
     compile 'org.slf4j:jcl-over-slf4j:1.7.21'
     compile 'ch.qos.logback:logback-classic:1.1.7'
 
+    compile project(':apng-base')
+
     // test
     testCompile 'org.testng:testng:6.8'
     testCompile 'org.codehaus.groovy:groovy-testng:2.4.7'
 }
 
-test.useTestNG()
+//test.useTestNG()
 
-shadowJar {
+task exejar(type: Jar, dependsOn: build) {
     archiveName "apngopt.jar";
+    from files(sourceSets.main.output.classesDir)
+    from files(sourceSets.main.resources)
+    from configurations.runtime.asFileTree.files.collect {
+        zipTree(it)
+    }
 
     manifest {
-        attributes("Main-Class": "li.tengfei.apng.opt.Runner")
+        attributes 'Main-Class': 'li.tengfei.apng.opt.Runner'
     }
 }

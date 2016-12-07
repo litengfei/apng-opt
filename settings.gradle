@@ -1,1 +1,3 @@
-rootProject.name = 'lapngopt'
+rootProject.name = 'apng-opt'
+include ':apng-base'
+project(':apng-base').projectDir = file("../lapng-base")
