@@ -3,6 +3,7 @@ package li.tengfei.apng.opt.builder
 import org.testng.annotations.Test
 
 import static li.tengfei.apng.opt.shrinker.TestConst.WORK_DIR
+import static org.testng.Assert.assertTrue
 
 /**
  * ApngRebuilder Test
@@ -18,6 +19,6 @@ class ApngRebuilderTest {
         String os = WORK_DIR + "/diamondstar-apngasm-opt.png"
 
         ApngRebuilder rebuilder = new ApngRebuilder()
-        rebuilder.rebuild(apngFile, shrinkedImgsDir, os)
+        assertTrue(rebuilder.rebuild(apngFile, shrinkedImgsDir, os))
     }
 }
