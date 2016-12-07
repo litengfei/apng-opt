@@ -1,5 +1,6 @@
 package li.tengfei.apng.opt.builder;
 
+import li.tengfei.apng.base.ApngACTLChunk;
 import li.tengfei.apng.base.ApngFrame;
 import li.tengfei.apng.base.ApngReader;
 import li.tengfei.apng.base.FormatNotSupportException;
@@ -29,7 +30,8 @@ public class ApngExtractor {
             if (outDir.exists()) outDir.delete();
             outDir.mkdirs();
 
-            for (int i = 0; i < apngReader.prepare().getNumFrames(); i++) {
+            ApngACTLChunk actl = apngReader.prepare();
+            for (int i = 0; i < actl.getNumFrames(); i++) {
                 ApngFrame frame = apngReader.nextFrame();
                 saveToFile(frame.getImageStream(), new File(outDir,
                         String.format("%s_%04d.png",
