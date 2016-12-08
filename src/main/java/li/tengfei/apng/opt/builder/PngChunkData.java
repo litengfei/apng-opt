@@ -11,8 +11,18 @@ import static li.tengfei.apng.base.ApngConst.CODE_IHDR;
  * @since 16/12/7, 上午11:54
  */
 public class PngChunkData {
+
     byte[] data;
+
     int typeCode;
+
+    public byte[] getData() {
+        return data;
+    }
+
+    public int getTypeCode() {
+        return typeCode;
+    }
 
     @Override
     public boolean equals(Object obj) {
