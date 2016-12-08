@@ -54,6 +54,39 @@ public class ApngRebuilder {
         return false;
     }
 
+    /**
+     * process reuse optimize,
+     * remove same chunks if the previous frame contains
+     */
+    @Deprecated
+    private void processReuse() {
+        //Arrays.equals()
+        for (int i = 0; i < mFrameDatas.size(); i++) {
+            PngData leader = mFrameDatas.get(i);
+            for (int j = i + 2; j < mFrameDatas.size(); j++) {
+                PngData follower = mFrameDatas.get(j);
+
+                for (int x = follower.chunks.size() - 1; x >= 0; x--) {
+                    PngChunkData followChunk = follower.chunks.get(x);
+                    boolean isReused = false;
+                    for (PngChunkData leaderChunk : leader.chunks) {
+                        if (followChunk.equals(leaderChunk)) {
+                            isReused = true;
+                            break;
+                        }
+                    }
+                    if (isReused) {
+                        follower.chunks.remove(x);
+                        log.info(String.format("reused chunk removed: frame[%d].%s",
+                                j,
+                                ChunkTypeHelper.getTypeName(followChunk.typeCode)
+                        ));
+                    }
+                }
+            }
+
+        }
+    }
 
     /**
      * process inherit optimize,
