@@ -41,8 +41,9 @@ public class ApngRebuilder {
             mFrameDatas = new PngsCollector().getPngs(shrinkedImgsDir);
 
             // prepare inputs
-            if (!prepare()) return
-                    false;
+            if (!prepare()) return false;
+
+            processInherit();
 
             return true;
         } catch (IOException e) {
@@ -53,6 +54,42 @@ public class ApngRebuilder {
         return false;
     }
 
+
+    /**
+     * process inherit optimize,
+     * remove same chunks if the previous frame contains
+     */
+    private void processInherit() {
+        //Arrays.equals()
+        for (int i = mFrameDatas.size() - 1; i > 0; i--) {
+            PngData cur = mFrameDatas.get(i);
+            PngData pre = mFrameDatas.get(i - 1);
+
+            for (int j = cur.chunks.size() - 1; j >= 0; j--) {
+                PngChunkData curChunk = cur.chunks.get(j);
+                boolean isInherited = false;
+                for (PngChunkData preChunk : pre.chunks) {
+                    if (curChunk.equals(preChunk)) {
+                        isInherited = true;
+                        break;
+                    }
+                }
+                if (isInherited) {
+                    cur.chunks.remove(j);
+                    log.info(String.format("inherit chunk removed: frame[%d].%s",
+                            i,
+                            ChunkTypeHelper.getTypeName(curChunk.typeCode)
+                    ));
+                }
+            }
+        }
+    }
+
+    /**
+     * prepare for rebuild, check frames and pngs count and size
+     *
+     * @return true if success, false if failed
+     */
     private boolean prepare() {
         // collect fctls
         ArrayList<ApngFCTLChunk> fctlChunks = new ArrayList<>();

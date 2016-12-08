@@ -14,7 +14,7 @@ import java.util.Map;
  */
 public class ChunkTypeHelper {
 
-    private static String getTypeName(int typeCode) {
+    public static String getTypeName(int typeCode) {
         return Reverter.instance.getTypeName(typeCode);
     }
 

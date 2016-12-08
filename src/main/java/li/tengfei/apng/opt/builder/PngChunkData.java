@@ -1,5 +1,9 @@
 package li.tengfei.apng.opt.builder;
 
+import java.util.Arrays;
+
+import static li.tengfei.apng.base.ApngConst.CODE_IHDR;
+
 /**
  * Png Chunk Data
  *
@@ -9,4 +13,33 @@ package li.tengfei.apng.opt.builder;
 public class PngChunkData {
     byte[] data;
     int typeCode;
+
+    @Override
+    public boolean equals(Object obj) {
+        // check pointer
+        if (this == obj) return true;
+        // check type
+        if (!(obj instanceof PngChunkData)) return false;
+        PngChunkData that = (PngChunkData) obj;
+        // check typeCode
+        if (this.typeCode != that.typeCode) return false;
+        // check data
+        if (this.typeCode == CODE_IHDR)
+            return ihdrEquals(this.data, that.data);
+        else
+            return Arrays.equals(this.data, that.data);
+    }
+
+    /**
+     * idhr equals don't include compare width and height
+     */
+    private boolean ihdrEquals(byte[] a, byte[] b) {
+        for (int i = 16; i < 21; i++) {
+            if (a[i] != b[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
