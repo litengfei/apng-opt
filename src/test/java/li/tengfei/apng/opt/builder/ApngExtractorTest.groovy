@@ -11,13 +11,21 @@ class ApngExtractorTest {
 
     @Test
     void testExtract() {
-        String apngFile = getClass().getResource("/pngs/diamondstar-apngasm.png").path
+        extract("diamondstar-apngasm.png")
+        extract("diamondstar-tiny.png")
+        extract("car.png")
+        extract("car-tiny.png")
+    }
+
+    private void extract(String resFn) {
+        String apngFile = getClass().getResource("/pngs/" + resFn).path
         ApngExtractor extractor = new ApngExtractor()
         extractor.extract(apngFile)
+    }
 
-        apngFile = getClass().getResource("/pngs/diamondstar-apngasm_frames_opt/diamondstar-apngasm_opt_0009.png").path
+    private void listChunks() {
+        String apngFile = getClass().getResource("/pngs/diamondstar-apngasm_frames_opt/diamondstar-apngasm_opt_0009.png").path
         PngReader reader = new PngReader(apngFile)
         reader.pngData.chunks.each { println(ChunkTypeHelper.getTypeName(it.typeCode)) }
-
     }
 }

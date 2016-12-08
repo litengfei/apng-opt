@@ -31,7 +31,7 @@ public class ApngExtractor {
             if (outDir.exists()) outDir.delete();
             outDir.mkdirs();
 
-            ApngACTLChunk actl = apngReader.prepare();
+            ApngACTLChunk actl = apngReader.getACTL();
             for (int i = 0; i < actl.getNumFrames(); i++) {
                 ApngFrame frame = apngReader.nextFrame();
                 File extractFile = new File(outDir,

@@ -109,6 +109,7 @@ public class ApngRebuilder {
 
         // end
         os.write(PngStream.PNG_IEND_DAT);
+        os.flush();
         return true;
     }
 
@@ -186,10 +187,10 @@ public class ApngRebuilder {
                 }
                 if (isInherited) {
                     cur.chunks.remove(j);
-                    log.info(String.format("inherit chunk removed: frame[%d].%s",
-                            i,
-                            ChunkTypeHelper.getTypeName(curChunk.typeCode)
-                    ));
+//                    log.info(String.format("inherit chunk removed: frame[%d].%s",
+//                            i,
+//                            ChunkTypeHelper.getTypeName(curChunk.typeCode)
+//                    ));
                 }
             }
         }

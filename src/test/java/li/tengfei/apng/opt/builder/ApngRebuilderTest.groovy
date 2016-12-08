@@ -16,9 +16,12 @@ class ApngRebuilderTest {
     void testRebuild() throws Exception {
         String apngFile = getClass().getResource("/pngs/diamondstar-apngasm.png").path
         String shrinkedImgsDir = getClass().getResource("/pngs/diamondstar-apngasm_frames_opt").path
-        String os = WORK_DIR + "/diamondstar-apngasm.ang"
+        String outFile = WORK_DIR + "/diamondstar-ang.ang"
 
         ApngRebuilder rebuilder = new ApngRebuilder()
-        assertTrue(rebuilder.rebuild(apngFile, shrinkedImgsDir, os))
+        assertTrue(rebuilder.rebuild(apngFile, shrinkedImgsDir, outFile))
+
+        ApngExtractor extractor = new ApngExtractor()
+        extractor.extract(outFile)
     }
 }
