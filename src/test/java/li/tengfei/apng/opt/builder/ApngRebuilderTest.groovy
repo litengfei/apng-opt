@@ -15,7 +15,7 @@ class ApngRebuilderTest {
     @Test
     void testRebuild() throws Exception {
         String apngFile = getClass().getResource("/pngs/diamondstar-apngasm.png").path
-        String shrinkedImgsDir = getClass().getResource("/pngs/diamondstar-apngasm").path
+        String shrinkedImgsDir = getClass().getResource("/pngs/diamondstar-apngasm_frames_opt").path
         String os = WORK_DIR + "/diamondstar-apngasm-opt.png"
 
         ApngRebuilder rebuilder = new ApngRebuilder()

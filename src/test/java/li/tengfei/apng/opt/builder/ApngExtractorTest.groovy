@@ -15,7 +15,7 @@ class ApngExtractorTest {
         ApngExtractor extractor = new ApngExtractor()
         extractor.extract(apngFile)
 
-        apngFile = getClass().getResource("/pngs/diamondstar-apngasm_frames/diamondstar-apngasm_0009.png").path
+        apngFile = getClass().getResource("/pngs/diamondstar-apngasm_frames_opt/diamondstar-apngasm_opt_0009.png").path
         PngReader reader = new PngReader(apngFile)
         reader.pngData.chunks.each { println(ChunkTypeHelper.getTypeName(it.typeCode)) }
 

@@ -56,47 +56,18 @@ public class ApngRebuilder {
     private boolean prepare() {
         // collect fctls
         ArrayList<ApngFCTLChunk> fctlChunks = new ArrayList<>();
-        ArrayList<Integer> repeats = new ArrayList<>();
-        int stepDelay = Integer.MAX_VALUE;
-        int delayDen = -1;
         for (PngChunkData chunk : mApngData.chunks) {
             if (chunk.typeCode == CODE_fcTL) {
                 ApngFCTLChunk fctlChunk = new ApngFCTLChunk();
                 fctlChunk.parse(new ByteArrayPngChunk(chunk.data));
                 fctlChunks.add(fctlChunk);
-                if (delayDen < 0) {
-                    delayDen = fctlChunk.getDelayDen();
-                } else if (delayDen != fctlChunk.getDelayDen()) {
-                    log.error("different delayDen in frames");
-                    return false;
-                }
-                repeats.add(fctlChunk.getDelayNum());
-                stepDelay = stepDelay <= fctlChunk.getDelayNum() ? stepDelay : fctlChunk.getDelayNum();
             }
-        }
-
-        // update frame repeats
-        ArrayList<Boolean> isFrameRepeat = new ArrayList<>();
-        for (int i = 0; i < repeats.size(); i++) {
-            int stepLen = repeats.get(i) / stepDelay;
-            isFrameRepeat.add(false);
-            for (int j = 1; j < stepLen; j++) {
-                isFrameRepeat.add(true);
-            }
-            repeats.set(i, repeats.get(i) / stepDelay);
         }
 
         // check all frames count and pngs count
-        if (isFrameRepeat.size() != mFrameDatas.size()) {
+        if (fctlChunks.size() != mFrameDatas.size()) {
             log.error("apng frames count not equals to png pictures count");
             return false;
-        }
-
-        // remove repeated frames' png
-        for (int i = mFrameDatas.size() - 1; i >= 0; i--) {
-            if (isFrameRepeat.get(i)) {
-                mFrameDatas.remove(i);
-            }
         }
 
         // collect ihdrs
