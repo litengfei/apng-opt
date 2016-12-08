@@ -4,6 +4,7 @@ import li.tengfei.apng.base.ApngACTLChunk;
 import li.tengfei.apng.base.ApngFrame;
 import li.tengfei.apng.base.ApngReader;
 import li.tengfei.apng.base.FormatNotSupportException;
+import li.tengfei.apng.opt.shrinker.TinypngShrinker;
 
 import java.io.*;
 
@@ -33,10 +34,20 @@ public class ApngExtractor {
             ApngACTLChunk actl = apngReader.prepare();
             for (int i = 0; i < actl.getNumFrames(); i++) {
                 ApngFrame frame = apngReader.nextFrame();
-                saveToFile(frame.getImageStream(), new File(outDir,
+                File extractFile = new File(outDir,
                         String.format("%s_%04d.png",
                                 frameFnPrefix,
-                                i)));
+                                i));
+                saveToFile(frame.getImageStream(), extractFile);
+
+//                File shrinkedFile = new File(outDir,
+//                        String.format("%s_opt_%04d.png",
+//                                frameFnPrefix,
+//                                i));
+//                TinypngShrinker.shrink(extractFile.getAbsolutePath(),
+//                        shrinkedFile.getAbsolutePath(),
+//                        "");
+
             }
             return true;
         } catch (IOException e) {

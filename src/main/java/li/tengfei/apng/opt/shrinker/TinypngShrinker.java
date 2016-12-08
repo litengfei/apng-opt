@@ -1,5 +1,6 @@
 package li.tengfei.apng.opt.shrinker;
 
+import com.tinify.Tinify;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -18,6 +19,11 @@ import java.io.*;
  * @since 16/12/5, 下午5:07
  */
 public class TinypngShrinker implements Shrinker {
+    public static void shrink(String inFile, String outFile, String apiKey) throws IOException {
+        Tinify.setKey(apiKey);
+        Tinify.fromFile(inFile).toFile(outFile);
+    }
+
     @Override
     public boolean optimize(InputStream in, OutputStream out) {
         try {
