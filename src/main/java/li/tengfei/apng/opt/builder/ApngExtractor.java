@@ -23,7 +23,7 @@ public class ApngExtractor {
     private static final Logger log = LoggerFactory.getLogger(ApngExtractor.class);
 
     public static String apngFramesDir(String srcApngFile) {
-        return extractFileDir(srcApngFile) + "/" + extractFilenameWithoutExt(srcApngFile) + "_frames";
+        return srcApngFile + ".frames";
     }
 
     public boolean extract(String srcApngFile, String tinyKey) {
