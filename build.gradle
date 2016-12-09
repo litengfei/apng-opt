@@ -36,7 +36,7 @@ dependencies {
 //test.useTestNG()
 
 task exejar(type: Jar, dependsOn: build) {
-    archiveName "apngopt.jar";
+    archiveName "AngMaker.jar";
     from files(sourceSets.main.output.classesDir)
     from files(sourceSets.main.resources)
     from configurations.runtime.asFileTree.files.collect {
