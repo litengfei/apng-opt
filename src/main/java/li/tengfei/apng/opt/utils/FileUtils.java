@@ -28,7 +28,9 @@ public class FileUtils {
      * extract file directory without last \ or /
      */
     public static String extractFileDir(String pathFilename) {
-        return pathFilename == null ? null : pathFilename.substring(0, pathFilename.lastIndexOf(File.separator));
+        return pathFilename == null ? null :
+                pathFilename.lastIndexOf(File.separator) > 0 ?
+                        pathFilename.substring(0, pathFilename.lastIndexOf(File.separator)) : pathFilename;
     }
 
     public static boolean mkDirs(String path) {

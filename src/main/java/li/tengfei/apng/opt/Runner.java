@@ -1,10 +1,10 @@
 package li.tengfei.apng.opt;
 
-import li.tengfei.apng.opt.builder.ApngRebuilder;
+import li.tengfei.apng.opt.command.Commander;
 
 public class Runner {
 
     public static void main(String[] args) {
-        new ApngRebuilder().rebuild("","","");
+        new Commander(args).run();
     }
 }

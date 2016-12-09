@@ -5,6 +5,8 @@ import li.tengfei.apng.base.ApngFrame;
 import li.tengfei.apng.base.ApngReader;
 import li.tengfei.apng.base.FormatNotSupportException;
 import li.tengfei.apng.opt.shrinker.TinypngShrinker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 
@@ -18,13 +20,15 @@ import static li.tengfei.apng.opt.utils.FileUtils.extractFilenameWithoutExt;
  * @since 16/12/7, 下午5:03
  */
 public class ApngExtractor {
+    private static final Logger log = LoggerFactory.getLogger(ApngExtractor.class);
 
     public static String apngFramesDir(String srcApngFile) {
         return extractFileDir(srcApngFile) + "/" + extractFilenameWithoutExt(srcApngFile) + "_frames";
     }
 
-    public boolean extract(String srcApngFile) {
+    public boolean extract(String srcApngFile, String tinyKey) {
         try {
+            srcApngFile = (new File(srcApngFile)).getAbsolutePath();
             ApngReader apngReader = new ApngReader(srcApngFile);
             String frameFnPrefix = extractFilenameWithoutExt(srcApngFile);
             File outDir = new File(apngFramesDir(srcApngFile));
@@ -40,14 +44,12 @@ public class ApngExtractor {
                                 i));
                 saveToFile(frame.getImageStream(), extractFile);
 
-//                File shrinkedFile = new File(outDir,
-//                        String.format("%s_opt_%04d.png",
-//                                frameFnPrefix,
-//                                i));
-//                TinypngShrinker.shrink(extractFile.getAbsolutePath(),
-//                        shrinkedFile.getAbsolutePath(),
-//                        "");
-
+                if (tinyKey != null && tinyKey.trim().length() > 0) {
+                    TinypngShrinker.shrink(extractFile.getAbsolutePath(),
+                            extractFile.getAbsolutePath(),
+                            tinyKey);
+                    log.info(String.format("frame[%d] compressed", i));
+                }
             }
             return true;
         } catch (IOException e) {

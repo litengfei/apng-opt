@@ -22,6 +22,6 @@ class ApngRebuilderTest {
         assertTrue(rebuilder.rebuild(apngFile, shrinkedImgsDir, outFile))
 
         ApngExtractor extractor = new ApngExtractor()
-        extractor.extract(outFile)
+        extractor.extract(outFile, null)
     }
 }

@@ -20,7 +20,7 @@ class ApngExtractorTest {
     private void extract(String resFn) {
         String apngFile = getClass().getResource("/pngs/" + resFn).path
         ApngExtractor extractor = new ApngExtractor()
-        extractor.extract(apngFile)
+        extractor.extract(apngFile, null)
     }
 
     private void listChunks() {
