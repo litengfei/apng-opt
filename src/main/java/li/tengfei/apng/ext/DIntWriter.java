@@ -1,6 +1,6 @@
 package li.tengfei.apng.ext;
 
-import li.tengfei.apng.base.patch.DInt;
+import li.tengfei.apng.base.DInt;
 
 import java.io.IOException;
 import java.io.OutputStream;

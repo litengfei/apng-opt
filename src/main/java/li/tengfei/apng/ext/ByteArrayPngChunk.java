@@ -56,6 +56,15 @@ public class ByteArrayPngChunk implements ApngDataSupplier {
     }
 
     @Override
+    public int read(byte[] dst, int dstOffset, int size) {
+        int count = buf.length - pos;
+        count = count < size ? count : size;
+        System.arraycopy(buf, pos, dst, dstOffset, count);
+        pos += count;
+        return count;
+    }
+
+    @Override
     public void move(int distance) {
         pos += distance;
     }
