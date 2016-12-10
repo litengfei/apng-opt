@@ -15,6 +15,7 @@ class ApngExtractorTest {
         extract("diamondstar-tiny.png")
         extract("car.png")
         extract("car-tiny.png")
+        extract("diamondstar-ang.ang")
     }
 
     private void extract(String resFn) {
