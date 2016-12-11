@@ -30,9 +30,9 @@ public class ApngRebuilder {
 
     private ArrayList<PngData> mFrameDatas;
 
-    private ArrayList<byte[]> mFctlDatas = new ArrayList<>();
+    private ArrayList<PngChunkData> mFctlChunks = new ArrayList<>();
 
-    private byte[] mActlData;
+    private PngChunkData mActlChunk;
 
     public PngData getApngData() {
         return mApngData;
@@ -67,22 +67,40 @@ public class ApngRebuilder {
      * compile to ".ang" format [ No Portable APNG ]
      * Format:
      * png header: SIG
-     * firstFrame: IHDR - acTL - PLTE and others - fcTL - IDAT(s)
-     * otherFrame: fcTL - PLTE and others - IDAT(s)
+     * ang chunks list
      * png end   : IEND
      */
     private boolean compileToANG(OutputStream os) throws IOException {
-        PngData firstFrame = mFrameDatas.get(0);
-        byte[] firstFctl = mFctlDatas.get(0);
-        if (firstFrame.chunks.get(0).typeCode != CODE_IHDR) return false;
         // sig
         os.write(PngStream.PNG_SIG_DAT);
 
+        ArrayList<PngChunkData> angChunks = compileAngChunks();
+
+        // write out all chunk
+        for (PngChunkData angChunk : angChunks) os.write(angChunk.data);
+        // end
+        os.write(PngStream.PNG_IEND_DAT);
+        os.flush();
+        return true;
+    }
+
+    /**
+     * compile to ".ang" format ordered chunks list
+     * Chunks Order Layout:
+     * firstFrame: IHDR - acTL - PLTE and others - fcTL - IDAT(s)
+     * otherFrame: fcTL - PLTE and others - IDAT(s)
+     */
+    private ArrayList<PngChunkData> compileAngChunks() {
+        ArrayList<PngChunkData> angChunks = new ArrayList<>();
+        PngData firstFrame = mFrameDatas.get(0);
+        PngChunkData firstFctl = mFctlChunks.get(0);
+        if (firstFrame.chunks.get(0).typeCode != CODE_IHDR) return angChunks;
+
         //  first IHDR
-        os.write(mFrameDatas.get(0).chunks.get(0).data);
+        angChunks.add(mFrameDatas.get(0).chunks.get(0));
 
         // write acTL
-        os.write(mActlData);
+        angChunks.add(mActlChunk);
 
         // write other chunks in first frame
         boolean fctlWritten = false;
@@ -90,27 +108,24 @@ public class ApngRebuilder {
             PngChunkData chunk = firstFrame.chunks.get(i);
             // write first fctl just before first IDAT
             if (chunk.typeCode == CODE_IDAT && !fctlWritten) {
-                os.write(firstFctl);
+                angChunks.add(firstFctl);
                 fctlWritten = true;
             }
-            os.write(chunk.data);
+            angChunks.add(chunk);
         }
 
         // write other frames, fcTL is the first chunk
         for (int i = 1; i < mFrameDatas.size(); i++) {
             // first write fctl in [not first] frame
-            os.write(mFctlDatas.get(i));
+            angChunks.add(mFctlChunks.get(i));
             // then write other chunks
             PngData frame = mFrameDatas.get(i);
             for (int j = 0; j < frame.chunks.size(); j++) {
-                os.write(frame.chunks.get(j).data);
+                angChunks.add(frame.chunks.get(j));
             }
         }
 
-        // end
-        os.write(PngStream.PNG_IEND_DAT);
-        os.flush();
-        return true;
+        return angChunks;
     }
 
 
@@ -203,17 +218,17 @@ public class ApngRebuilder {
      */
     private boolean prepare() {
         // collect fctls
-        mFctlDatas.clear();
-        mActlData = null;
+        mFctlChunks.clear();
+        mActlChunk = null;
         ArrayList<ApngFCTLChunk> fctlChunks = new ArrayList<>();
         for (PngChunkData chunk : mApngData.chunks) {
             if (chunk.typeCode == CODE_fcTL) {
                 ApngFCTLChunk fctlChunk = new ApngFCTLChunk();
                 fctlChunk.parse(new ByteArrayPngChunk(chunk.data));
                 fctlChunks.add(fctlChunk);
-                mFctlDatas.add(chunk.data);
+                mFctlChunks.add(chunk);
             } else if (chunk.typeCode == CODE_acTL) {
-                mActlData = chunk.data;
+                mActlChunk = chunk;
             }
         }
 
