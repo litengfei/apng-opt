@@ -5,7 +5,8 @@ import li.tengfei.apng.base.ApngIHDRChunk;
 import li.tengfei.apng.base.FormatNotSupportException;
 import li.tengfei.apng.base.PngStream;
 import li.tengfei.apng.ext.ByteArrayPngChunk;
-import li.tengfei.apng.ext.DIntWriter;
+import li.tengfei.apng.opt.optimizer.ChunkTypeHelper;
+import li.tengfei.apng.opt.optimizer.PatchOptimizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,7 +15,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Collection;
 
 import static li.tengfei.apng.base.ApngConst.*;
 
@@ -76,10 +76,12 @@ public class ApngRebuilder {
         // sig
         os.write(PngStream.PNG_SIG_DAT);
 
-        ArrayList<PngChunkData> angChunks = compileAngChunks();
+        AngData ang = compileAngChunks();
+
+        ang = new PatchOptimizer().optimize(ang);
 
         // write out all chunk
-        for (PngChunkData angChunk : angChunks) os.write(angChunk.data);
+        for (AngChunkData angChunk : ang.getChunks()) os.write(angChunk.data);
         // end
         os.write(PngStream.PNG_IEND_DAT);
         os.flush();
@@ -92,17 +94,18 @@ public class ApngRebuilder {
      * firstFrame: IHDR - acTL - PLTE and others - fcTL - IDAT(s)
      * otherFrame: fcTL - PLTE and others - IDAT(s)
      */
-    private ArrayList<PngChunkData> compileAngChunks() {
-        ArrayList<PngChunkData> angChunks = new ArrayList<>();
+    private AngData compileAngChunks() {
+        AngData ang = new AngData();
         PngData firstFrame = mFrameDatas.get(0);
         PngChunkData firstFctl = mFctlChunks.get(0);
-        if (firstFrame.chunks.get(0).typeCode != CODE_IHDR) return angChunks;
+        if (firstFrame.chunks.get(0).typeCode != CODE_IHDR) return ang;
 
+        int frameIndex = 0;
         //  first IHDR
-        angChunks.add(mFrameDatas.get(0).chunks.get(0));
+        ang.addChunk(mFrameDatas.get(0).chunks.get(0), frameIndex);
 
         // write acTL
-        angChunks.add(mActlChunk);
+        ang.addChunk(mActlChunk, frameIndex);
 
         // write other chunks in first frame
         boolean fctlWritten = false;
@@ -110,44 +113,27 @@ public class ApngRebuilder {
             PngChunkData chunk = firstFrame.chunks.get(i);
             // write first fctl just before first IDAT
             if (chunk.typeCode == CODE_IDAT && !fctlWritten) {
-                angChunks.add(firstFctl);
+                ang.addChunk(firstFctl, frameIndex);
                 fctlWritten = true;
             }
-            angChunks.add(chunk);
+            ang.addChunk(chunk, frameIndex);
         }
 
         // write other frames, fcTL is the first chunk
         for (int i = 1; i < mFrameDatas.size(); i++) {
+            frameIndex++;
             // first write fctl in [not first] frame
-            angChunks.add(mFctlChunks.get(i));
+            ang.addChunk(mFctlChunks.get(i), frameIndex);
             // then write other chunks
             PngData frame = mFrameDatas.get(i);
             for (int j = 0; j < frame.chunks.size(); j++) {
-                angChunks.add(frame.chunks.get(j));
+                ang.addChunk(frame.chunks.get(j), frameIndex);
             }
         }
 
-        return angChunks;
+        return ang;
     }
 
-
-//    /**
-//     * merge each frame's IDATs or fcATs to only one,
-//     * and compute each new fdAT translate to IDAT's CRC
-//     *
-//     * @return full fcRC chunk data (size + codeType + data + crc)
-//     */
-//    private byte[] mergeDatAndGetFcrc() {
-//        byte[] fcRCdata = new byte[mFrameDatas.size() * 4 + 12];
-//        CRC32 crcCal = new CRC32();
-//
-//        for (int i = 0; i < mFrameDatas.size(); i++) {
-//            crcCal.re
-//
-//        }
-//
-//        return fcRCdata;
-//    }
 
     /**
      * process reuse optimize,

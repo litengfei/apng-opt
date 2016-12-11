@@ -40,20 +40,17 @@ public class PngReader {
     /**
      * get chunks list of a png file
      */
-    public ArrayList<PngChunkData> getChunks() throws IOException {
+    public void getChunks(ArrayList<PngChunkData> chunks) throws IOException {
         mChunk = new ApngMmapParserChunk(mBuffer);
         // locate IHDR
         mChunk.parsePrepare(8);
 
-        ArrayList<PngChunkData> chunks = new ArrayList<>();
         while (mChunk.parseNext() > 0) {
-            PngChunkData chunkData = new PngChunkData();
-            chunkData.typeCode = mChunk.getTypeCode();
-            chunkData.data = mChunk.duplicateData();
-            chunks.add(chunkData);
+            chunks.add(new PngChunkData(
+                    mChunk.duplicateData(),
+                    mChunk.getTypeCode()
+            ));
         }
-
-        return chunks;
     }
 
     /**
@@ -61,7 +58,7 @@ public class PngReader {
      */
     public PngData getPngData() throws IOException {
         PngData pngData = new PngData();
-        pngData.chunks = getChunks();
+        getChunks(pngData.chunks);
         return pngData;
     }
 }

@@ -1,5 +1,6 @@
 package li.tengfei.apng.opt.builder
 
+import li.tengfei.apng.opt.optimizer.ChunkTypeHelper
 import org.testng.annotations.Test
 
 /**

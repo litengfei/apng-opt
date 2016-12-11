@@ -5,7 +5,7 @@ import li.tengfei.apng.ext.DIntWriter
 import org.testng.Assert
 import org.testng.annotations.Test
 
-import static li.tengfei.apng.opt.builder.ChunkTypeHelper.*
+import static li.tengfei.apng.opt.optimizer.ChunkTypeHelper.*
 
 /**
  *

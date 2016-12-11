@@ -16,6 +16,15 @@ public class PngChunkData {
 
     int typeCode;
 
+    public PngChunkData(byte[] data, int typeCode) {
+        this.data = data;
+        this.typeCode = typeCode;
+    }
+
+    public PngChunkData(PngChunkData chunkData) {
+        this(chunkData.data, chunkData.typeCode);
+    }
+
     public byte[] getData() {
         return data;
     }

@@ -1,4 +1,4 @@
-package li.tengfei.apng.opt.builder;
+package li.tengfei.apng.opt.optimizer;
 
 import li.tengfei.apng.base.AngPatch;
 import li.tengfei.apng.base.ApngConst;

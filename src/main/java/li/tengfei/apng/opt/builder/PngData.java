@@ -9,5 +9,5 @@ import java.util.ArrayList;
  * @since 16/12/7, 下午1:05
  */
 public class PngData {
-    ArrayList<PngChunkData> chunks;
+    ArrayList<PngChunkData> chunks = new ArrayList<>();
 }
