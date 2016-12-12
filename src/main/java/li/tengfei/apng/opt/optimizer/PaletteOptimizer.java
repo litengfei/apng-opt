@@ -1,10 +1,11 @@
 package li.tengfei.apng.opt.optimizer;
 
+import li.tengfei.apng.opt.builder.AngChunkData;
 import li.tengfei.apng.opt.builder.AngData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
+import java.util.ArrayList;
 
 import static li.tengfei.apng.base.ApngConst.CODE_PLTE;
 
@@ -22,62 +23,87 @@ public class PaletteOptimizer implements AngOptimizer {
 
     @Override
     public AngData optimize(AngData ang) {
+        ArrayList<Palette> palettes = genPalettes(ang);
+        palettes = optmizePalette(palettes);
+        return null;
+    }
 
-        int[] allEntries = new int[1];
-        allEntries[0] = 0;
-        HashSet<Integer> colors = new HashSet<>();
-        HashSet<Color> sameColors = new HashSet<>();
 
-        ang.getChunks().forEach(it -> {
-            if (it.getTypeCode() == CODE_PLTE) {
-                byte[] data = it.getData();
-                int count = entriesCount(data);
-                for (int i = 0; i < count; i++) {
-                    allEntries[0]++;
-                    colors.add(readEntry(data, i));
-                    sameColors.add(new Color(data, i));
-                }
-                log.debug(String.format("frame: %d, count: %d, all: %d, colors: %d, sameColors: %d",
-                        it.getFrameIndex(),
-                        count,
-                        allEntries[0],
-                        colors.size(),
-                        sameColors.size()));
-            }
-        });
+    /**
+     * @param palettes
+     * @return
+     */
+    private ArrayList<Palette> optmizePalette(ArrayList<Palette> palettes) {
+
 
         return null;
+
+    }
+
+    /**
+     * generate palettes with Merged Color to the most previous one
+     */
+    private ArrayList<Palette> genPalettes(AngData ang) {
+        Palette pre = null;
+        ArrayList<Palette> palettes = new ArrayList<>();
+        ArrayList<Color> newColors = new ArrayList<>();
+        int chunkIndex = -1;
+        for (AngChunkData chunk : ang.getChunks()) {
+            chunkIndex++;
+            if (chunk.getTypeCode() != CODE_PLTE) continue;
+
+            if (pre == null) {
+                pre = new Palette(chunkIndex);
+            }
+
+            // get new appeared colors in this frame
+            byte[] data = chunk.getData();
+            int count = entriesCount(data);
+            newColors.clear();
+            for (int i = 0; i < count; i++) {
+                Color newColor = new Color(data, i);
+                for (Color color : pre.colors) {
+                    if (newColor.sameAs(color)) {
+                        newColor = null;
+                        break;
+                    }
+                }
+                if (newColor != null) {
+                    newColors.add(newColor);
+                }
+            }
+
+            if (pre.colors.size() + newColors.size() > 256) {
+                palettes.add(pre);
+                pre = new Palette(chunkIndex);
+                pre.colors.addAll(newColors);
+            } else {
+                pre.colors.addAll(newColors);
+            }
+        }
+        if (pre != null) palettes.add(pre);
+
+        for (Palette p : palettes) {
+            log.debug(String.format("chunk: %d, frame: %d, colors: %d",
+                    p.chunkIndex,
+                    ang.getChunks().get(p.chunkIndex).getFrameIndex(),
+                    p.colors.size()));
+        }
+
+        return palettes;
     }
 
     private int entriesCount(byte[] chunkData) {
         return (chunkData.length - 12) / 3;
     }
 
-    private int readEntry(byte[] chunkData, int index) {
-        int off = 8 + index * 3;
-        int color = (chunkData[off++] & 0xFF) << 16;
-        color += (chunkData[off++] & 0xFF) << 8;
-        color += (chunkData[off] & 0xFF);
-        return color;
-    }
+    private static class Palette {
+        ArrayList<Color> colors = new ArrayList<>();
+        int chunkIndex;
 
-    private void writeEntry(byte[] chunkData, int index, int color) {
-        int off = 8 + index * 3;
-        chunkData[off++] = (byte) (color >> 16 & 0xFF);
-        chunkData[off++] = (byte) (color >> 8 & 0xFF);
-        chunkData[off] = (byte) (color & 0xFF);
-    }
-
-
-    /**
-     * gen same color
-     *
-     * @param color
-     * @param sameColor
-     */
-    private void sameColor(int color, int[] sameColor) {
-
-
+        public Palette(int chunkIndex) {
+            this.chunkIndex = chunkIndex;
+        }
     }
 
     private static class Color {
@@ -93,7 +119,7 @@ public class PaletteOptimizer implements AngOptimizer {
             int diff = Math.abs(this.data[this.offset] - color.data[color.offset]);
             diff += Math.abs(this.data[this.offset + 1] - color.data[color.offset + 1]);
             diff += Math.abs(this.data[this.offset + 2] - color.data[color.offset + 2]);
-            return diff <= 0;
+            return diff <= 6;
         }
 
         @Override
@@ -110,8 +136,8 @@ public class PaletteOptimizer implements AngOptimizer {
         @Override
         public int hashCode() {
             int color = (data[offset] & 0xFF) << 16;
-            color += (data[offset+1] & 0xFF) << 8;
-            color += (data[offset+2] & 0xFF);
+            color += (data[offset + 1] & 0xFF) << 8;
+            color += (data[offset + 2] & 0xFF);
             return color;
         }
     }
