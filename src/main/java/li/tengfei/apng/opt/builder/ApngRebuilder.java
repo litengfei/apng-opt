@@ -6,6 +6,7 @@ import li.tengfei.apng.base.FormatNotSupportException;
 import li.tengfei.apng.base.PngStream;
 import li.tengfei.apng.ext.ByteArrayPngChunk;
 import li.tengfei.apng.opt.optimizer.ChunkTypeHelper;
+import li.tengfei.apng.opt.optimizer.PaletteOptimizer;
 import li.tengfei.apng.opt.optimizer.PatchOptimizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,7 +79,7 @@ public class ApngRebuilder {
 
         AngData ang = compileAngChunks();
 
-        ang = new PatchOptimizer().optimize(ang);
+        ang = new PaletteOptimizer().optimize(ang);
 
         // write out all chunk
         for (AngChunkData angChunk : ang.getChunks()) os.write(angChunk.data);
