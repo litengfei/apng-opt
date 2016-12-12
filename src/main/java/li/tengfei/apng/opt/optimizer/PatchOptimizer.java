@@ -55,9 +55,10 @@ public class PatchOptimizer implements AngOptimizer {
 
         int chunkIdx = 0;
         int patchIdx = 0;
+        int allPatchSize = 0;
+        int allOrigSize = 0;
         List<PatchItem> framePatches = new ArrayList<>();
         for (AngChunkData chunk : ang.getChunks()) {
-
             if ((chunk.getTypeCode() == CODE_IDAT || chunk.getTypeCode() == CODE_fdAT) && framePatches.size() > 0) {
                 // combine to a patch chunk
                 int defSize = 0;
@@ -109,17 +110,22 @@ public class PatchOptimizer implements AngOptimizer {
                 AngChunkData patchChunk = new AngChunkData(data, CODE_paCH, chunk.getFrameIndex());
                 optAng.addChunk(patchChunk);
                 framePatches.clear();
+                allPatchSize += data.length;
             }
 
             if (patchIdx >= patches.size() || chunkIdx < patches.get(patchIdx).chunkIndex) {
                 optAng.addChunk(chunk);
             } else {
                 framePatches.add(patches.get(patchIdx));
+                allOrigSize += chunk.getData().length;
                 patchIdx++;
             }
 
             chunkIdx++;
         }
+
+        log.debug(String.format("PatchOptimize Result:  OrigSize: %d, PatchSize: %d, saved: %d",
+                allOrigSize, allPatchSize, allPatchSize - allOrigSize));
 
         return optAng;
     }
@@ -221,7 +227,9 @@ public class PatchOptimizer implements AngOptimizer {
         int noHashCost = dataSize + defSize + dIntCost(itemCount);
 
         // select use patch or not conditions
-        if (noHashCost >= curData.length - 2) return null;
+        if (noHashCost >= curData.length - 13) return null;
+//        log.debug(String.format("noHashCost: %d, curDataLength: %d, saved: %d",
+//                noHashCost, curData.length, noHashCost - curData.length));
 
         PatchItem patchItem = new PatchItem();
         patchItem.defData = new byte[defSize + dIntCost(itemCount)];
@@ -245,8 +253,8 @@ public class PatchOptimizer implements AngOptimizer {
                 patchItem.data[dataOff] = (byte) (block.deleteSize >> 8 & 0xFF);
                 patchItem.data[dataOff + 1] = (byte) (block.deleteSize & 0xFF);
 
-                log.debug(String.format("dstOff: %d, delSize: %d, srcOff: %d",
-                        block.dstOffset, block.deleteSize, dataOff));
+//                log.debug(String.format("dstOff: %d, delSize: %d, srcOff: %d",
+//                        block.dstOffset, block.deleteSize, dataOff));
                 dataOff += 2;
             } else {
                 // write def : dataSize
@@ -255,8 +263,8 @@ public class PatchOptimizer implements AngOptimizer {
                 // write data
                 System.arraycopy(curData, block.dstOffset, patchItem.data, dataOff, block.dataSize);
 
-                log.debug(String.format("dstOff: %d, dataSize: %d, srcOff: %d",
-                        block.dstOffset, block.dataSize, dataOff));
+//                log.debug(String.format("dstOff: %d, dataSize: %d, srcOff: %d",
+//                        block.dstOffset, block.dataSize, dataOff));
 
                 dataOff += block.dataSize;
             }
