@@ -4,6 +4,8 @@ import li.tengfei.apng.base.PngStream;
 import li.tengfei.apng.ext.DIntWriter;
 import li.tengfei.apng.opt.builder.AngChunkData;
 import li.tengfei.apng.opt.builder.AngData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,6 +22,7 @@ import static li.tengfei.apng.base.DInt.*;
  * @since 16/12/11, 下午2:17
  */
 public class PatchOptimizer implements AngOptimizer {
+    private static final Logger log = LoggerFactory.getLogger(PatchOptimizer.class);
     private CRC32 crc = new CRC32();
 
 
@@ -189,6 +192,16 @@ public class PatchOptimizer implements AngOptimizer {
             blocks.add(new PatchItemBlock(lastDiffPos, curData.length - lastDiffPos));
         }
 
+        // add delete block if data size reduced
+        if (curData.length < preData.length) {
+            int delSize = preData.length - curData.length;
+            while (delSize > 0) {
+                int ds = delSize < 65535 ? delSize : 65535;
+                delSize -= ds;
+                blocks.add(new PatchItemBlock(curData.length, 2).setDeletePatch(ds));
+            }
+        }
+
         if (blocks.size() == 0)
             throw new IllegalStateException("Why are same data chunks appears? is processInherit() not run?");
 
@@ -223,13 +236,30 @@ public class PatchOptimizer implements AngOptimizer {
             // write def : dstOffset
             dInt.setValue(block.dstOffset);
             defOff += dInt.write(patchItem.defData, defOff);
-            // write def : dataSize
-            dInt.setValue(block.dataSize);
-            defOff += dInt.write(patchItem.defData, defOff);
 
-            // write data
-            System.arraycopy(curData, block.dstOffset, patchItem.data, dataOff, block.dataSize);
-            dataOff += block.dataSize;
+            if (block.isDeletePatch) {
+                // write def : dataSize == 0 for DELETE patch
+                dInt.setValue(0);
+                defOff += dInt.write(patchItem.defData, defOff);
+                // write data, 2 byte BIG-ENDIAN unsigned word to specified bytes count to delete
+                patchItem.data[dataOff] = (byte) (block.deleteSize >> 8 & 0xFF);
+                patchItem.data[dataOff + 1] = (byte) (block.deleteSize & 0xFF);
+
+                log.debug(String.format("dstOff: %d, delSize: %d, srcOff: %d",
+                        block.dstOffset, block.deleteSize, dataOff));
+                dataOff += 2;
+            } else {
+                // write def : dataSize
+                dInt.setValue(block.dataSize);
+                defOff += dInt.write(patchItem.defData, defOff);
+                // write data
+                System.arraycopy(curData, block.dstOffset, patchItem.data, dataOff, block.dataSize);
+
+                log.debug(String.format("dstOff: %d, dataSize: %d, srcOff: %d",
+                        block.dstOffset, block.dataSize, dataOff));
+
+                dataOff += block.dataSize;
+            }
         }
         return patchItem;
     }
@@ -241,6 +271,15 @@ public class PatchOptimizer implements AngOptimizer {
         ArrayList<PatchItemBlock> optBlocks = new ArrayList<>();
         PatchItemBlock preBlock = null;
         for (PatchItemBlock block : blocks) {
+            if (block.isDeletePatch) {
+                if (preBlock != null) {
+                    optBlocks.add(preBlock);
+                    preBlock = null;
+                }
+                optBlocks.add(block);
+                continue;
+            }
+
             if (preBlock == null) {
                 preBlock = block;
             } else {
@@ -275,6 +314,8 @@ public class PatchOptimizer implements AngOptimizer {
     private static class PatchItemBlock {
         private int dstOffset;
         private int dataSize;
+        private boolean isDeletePatch;
+        private int deleteSize;
         private int costBytesCount; // all bytes count to implement this patch block
 
         PatchItemBlock(int dstOffset, int dataSize) {
@@ -294,6 +335,14 @@ public class PatchOptimizer implements AngOptimizer {
          */
         static int calBlockCost(int offset, int dataSize) {
             return dIntCost(offset) + dIntCost(dataSize) + dataSize;
+        }
+
+        PatchItemBlock setDeletePatch(int deleteSize) {
+            isDeletePatch = true;
+            dataSize = 2;
+            this.costBytesCount = calBlockCost(dstOffset, 2);
+            this.deleteSize = deleteSize;
+            return this;
         }
     }
 }
