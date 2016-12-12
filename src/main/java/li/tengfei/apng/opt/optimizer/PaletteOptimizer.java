@@ -4,7 +4,6 @@ import li.tengfei.apng.opt.builder.AngData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 
 import static li.tengfei.apng.base.ApngConst.CODE_PLTE;
@@ -24,26 +23,24 @@ public class PaletteOptimizer implements AngOptimizer {
     @Override
     public AngData optimize(AngData ang) {
 
+        int[] allEntries = new int[1];
+        allEntries[0] = 0;
         HashSet<Integer> colors = new HashSet<>();
-        ArrayList<Color> sameColors = new ArrayList<>();
+        HashSet<Color> sameColors = new HashSet<>();
 
         ang.getChunks().forEach(it -> {
             if (it.getTypeCode() == CODE_PLTE) {
                 byte[] data = it.getData();
                 int count = entriesCount(data);
                 for (int i = 0; i < count; i++) {
+                    allEntries[0]++;
                     colors.add(readEntry(data, i));
-                    Color sColor = new Color(data, i);
-                    for (Color c : sameColors) {
-                        if (c.equals(sColor)) {
-                            sColor = null;
-                            break;
-                        }
-                    }
-                    if (sColor != null) sameColors.add(sColor);
+                    sameColors.add(new Color(data, i));
                 }
-                log.debug(String.format("frame: %d, colors: %d, sameColors: %d",
+                log.debug(String.format("frame: %d, count: %d, all: %d, colors: %d, sameColors: %d",
                         it.getFrameIndex(),
+                        count,
+                        allEntries[0],
                         colors.size(),
                         sameColors.size()));
             }
@@ -92,23 +89,29 @@ public class PaletteOptimizer implements AngOptimizer {
             this.offset = 8 + index * 3;
         }
 
+        public boolean sameAs(Color color) {
+            int diff = Math.abs(this.data[this.offset] - color.data[color.offset]);
+            diff += Math.abs(this.data[this.offset + 1] - color.data[color.offset + 1]);
+            diff += Math.abs(this.data[this.offset + 2] - color.data[color.offset + 2]);
+            return diff <= 0;
+        }
+
         @Override
         public boolean equals(Object obj) {
             if (obj instanceof Color) {
                 Color color = (Color) obj;
-                int diff = Math.abs(this.data[this.offset] - color.data[color.offset]);
-                diff += Math.abs(this.data[this.offset + 1] - color.data[color.offset + 1]);
-                diff += Math.abs(this.data[this.offset + 2] - color.data[color.offset + 2]);
-                return diff <= 0;
+                return this.data[this.offset] == color.data[color.offset]
+                        && this.data[this.offset + 1] == color.data[color.offset + 1]
+                        && this.data[this.offset + 2] == color.data[color.offset + 2];
             }
             return false;
         }
 
         @Override
         public int hashCode() {
-            int color = (data[offset++] & 0xFF) << 16;
-            color += (data[offset++] & 0xFF) << 8;
-            color += (data[offset] & 0xFF);
+            int color = (data[offset] & 0xFF) << 16;
+            color += (data[offset+1] & 0xFF) << 8;
+            color += (data[offset+2] & 0xFF);
             return color;
         }
     }
