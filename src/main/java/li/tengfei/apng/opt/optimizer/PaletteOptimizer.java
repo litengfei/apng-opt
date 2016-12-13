@@ -32,14 +32,27 @@ public class PaletteOptimizer implements AngOptimizer {
 
 
     /**
-     * @param palettes
-     * @return
+     * optimize colors order in palettes for better patch reduce
      */
     private ArrayList<Palette> optmizePalette(ArrayList<Palette> palettes) {
 
+        ArrayList<Integer> sameCount = new ArrayList<>();
+        for (int i = 1; i < palettes.size(); i++) {
+            HashSet<Color> preColors = new HashSet<>();
+            preColors.addAll(palettes.get(i - 1).colors);
+            ArrayList<Color> curColors = palettes.get(i).colors;
+            int count = 0;
+            for(Color color: curColors) {
+                if (preColors.contains(color)) count++;
+            }
+            sameCount.add(count);
+        }
 
+        for (int count : sameCount) {
+            log.debug(String.format("sameCount: %d",
+                    count));
+        }
         return null;
-
     }
 
     /**
@@ -126,9 +139,9 @@ public class PaletteOptimizer implements AngOptimizer {
         if (trnsChunkData != null && index < trnsChunkData.length)
             alpha = trnsChunkData[index];
         int off = 8 + index * 3;
-        return new Color(plteChunkData[off]& 0xFF,
-                plteChunkData[off + 1]& 0xFF,
-                plteChunkData[off + 2]& 0xFF);
+        return new Color(plteChunkData[off] & 0xFF,
+                plteChunkData[off + 1] & 0xFF,
+                plteChunkData[off + 2] & 0xFF);
     }
 
     /**
