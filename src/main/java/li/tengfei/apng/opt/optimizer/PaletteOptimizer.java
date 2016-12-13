@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 
-import static li.tengfei.apng.base.ApngConst.CODE_PLTE;
+import static li.tengfei.apng.base.ApngConst.*;
 
 /**
  * Optimizer for the ANG frames palette
@@ -48,20 +48,35 @@ public class PaletteOptimizer implements AngOptimizer {
         ArrayList<Palette> palettes = new ArrayList<>();
         ArrayList<Color> newColors = new ArrayList<>();
         int chunkIndex = -1;
+        int plteIndex = -1;
+        int trnsIndex = -1;
         for (AngChunkData chunk : ang.getChunks()) {
             chunkIndex++;
-            if (chunk.getTypeCode() != CODE_PLTE) continue;
+            switch (chunk.getTypeCode()) {
+                case CODE_PLTE:
+                    plteIndex = chunkIndex;
+                    continue;
+                case CODE_tRNS:
+                    trnsIndex = chunkIndex;
+                    continue;
+                case CODE_IDAT:
+                case CODE_fdAT:
+                    if (plteIndex >= 0) break;
+                default:
+                    continue;
+            }
 
             if (pre == null) {
-                pre = new Palette(chunkIndex);
+                pre = new Palette(plteIndex, trnsIndex);
             }
 
             // get new appeared colors in this frame
-            byte[] data = chunk.getData();
+            byte[] data = ang.getChunks().get(plteIndex).getData();
+            byte[] alpha = ang.getChunks().get(trnsIndex).getData();
             int count = entriesCount(data);
             newColors.clear();
             for (int i = 0; i < count; i++) {
-                Color newColor = new Color(data, i);
+                Color newColor = new Color(data, alpha, i);
                 for (Color color : pre.colors) {
                     if (newColor.sameAs(color)) {
                         newColor = null;
@@ -75,18 +90,21 @@ public class PaletteOptimizer implements AngOptimizer {
 
             if (pre.colors.size() + newColors.size() > 256) {
                 palettes.add(pre);
-                pre = new Palette(chunkIndex);
+                pre = new Palette(plteIndex, trnsIndex);
                 pre.colors.addAll(newColors);
             } else {
                 pre.colors.addAll(newColors);
             }
+
+            plteIndex = -1;
+            trnsIndex = -1;
         }
         if (pre != null) palettes.add(pre);
 
         for (Palette p : palettes) {
             log.debug(String.format("chunk: %d, frame: %d, colors: %d",
-                    p.chunkIndex,
-                    ang.getChunks().get(p.chunkIndex).getFrameIndex(),
+                    p.plteIndex,
+                    ang.getChunks().get(p.plteIndex).getFrameIndex(),
                     p.colors.size()));
         }
 
@@ -99,27 +117,39 @@ public class PaletteOptimizer implements AngOptimizer {
 
     private static class Palette {
         ArrayList<Color> colors = new ArrayList<>();
-        int chunkIndex;
+        int plteIndex;
+        int trnsIndex;
 
-        public Palette(int chunkIndex) {
-            this.chunkIndex = chunkIndex;
+        public Palette(int plteIndex, int trnsIndex) {
+            this.plteIndex = plteIndex;
+            this.trnsIndex = trnsIndex;
         }
     }
 
     private static class Color {
         private byte[] data;
         private int offset;
+        private byte[] alpha;
+        private int aOff;
 
-        public Color(byte[] data, int index) {
+        public Color(byte[] data, byte[] alpha, int index) {
             this.data = data;
             this.offset = 8 + index * 3;
+            this.alpha = alpha;
+            this.aOff = index;
+        }
+
+        byte getAlpha() {
+            if (aOff < alpha.length) return alpha[aOff];
+            else return (byte) 0xff;
         }
 
         public boolean sameAs(Color color) {
-            int diff = Math.abs(this.data[this.offset] - color.data[color.offset]);
+            int diff = Math.abs(this.getAlpha() - color.getAlpha());
+            diff += Math.abs(this.data[this.offset] - color.data[color.offset]);
             diff += Math.abs(this.data[this.offset + 1] - color.data[color.offset + 1]);
             diff += Math.abs(this.data[this.offset + 2] - color.data[color.offset + 2]);
-            return diff <= 6;
+            return diff <= 0;
         }
 
         @Override
@@ -128,14 +158,16 @@ public class PaletteOptimizer implements AngOptimizer {
                 Color color = (Color) obj;
                 return this.data[this.offset] == color.data[color.offset]
                         && this.data[this.offset + 1] == color.data[color.offset + 1]
-                        && this.data[this.offset + 2] == color.data[color.offset + 2];
+                        && this.data[this.offset + 2] == color.data[color.offset + 2]
+                        && this.getAlpha() == color.getAlpha();
             }
             return false;
         }
 
         @Override
         public int hashCode() {
-            int color = (data[offset] & 0xFF) << 16;
+            int color = getAlpha() << 24;
+            color += (data[offset] & 0xFF) << 16;
             color += (data[offset + 1] & 0xFF) << 8;
             color += (data[offset + 2] & 0xFF);
             return color;
