@@ -5,7 +5,9 @@ import li.tengfei.apng.opt.builder.AngData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 
 import static li.tengfei.apng.base.ApngConst.*;
 
@@ -73,17 +75,13 @@ public class PaletteOptimizer implements AngOptimizer {
             // get new appeared colors in this frame
             byte[] data = ang.getChunks().get(plteIndex).getData();
             byte[] alpha = ang.getChunks().get(trnsIndex).getData();
-            int count = entriesCount(data);
+            int count = colorsCount(data);
             newColors.clear();
+            HashSet<Color> preColors = new HashSet<>();
+            preColors.addAll(pre.colors);
             for (int i = 0; i < count; i++) {
-                Color newColor = new Color(data, alpha, i);
-                for (Color color : pre.colors) {
-                    if (newColor.sameAs(color)) {
-                        newColor = null;
-                        break;
-                    }
-                }
-                if (newColor != null) {
+                Color newColor = readColor(data, alpha, i);
+                if (!preColors.contains(newColor)) {
                     newColors.add(newColor);
                 }
             }
@@ -111,8 +109,44 @@ public class PaletteOptimizer implements AngOptimizer {
         return palettes;
     }
 
-    private int entriesCount(byte[] chunkData) {
-        return (chunkData.length - 12) / 3;
+    private int colorsCount(byte[] plteChunkData) {
+        return (plteChunkData.length - 12) / 3;
+    }
+
+    /**
+     * read color from PLTE & tRNS chunks data
+     *
+     * @param plteChunkData not null
+     * @param trnsChunkData can be null, then alpha is 255
+     * @param index         color index
+     * @return color
+     */
+    private Color readColor(byte[] plteChunkData, byte[] trnsChunkData, int index) {
+        int alpha = 255;
+        if (trnsChunkData != null && index < trnsChunkData.length)
+            alpha = trnsChunkData[index];
+        int off = 8 + index * 3;
+        return new Color(plteChunkData[off]& 0xFF,
+                plteChunkData[off + 1]& 0xFF,
+                plteChunkData[off + 2]& 0xFF);
+    }
+
+    /**
+     * write color to PLTE & rRNS chunk data
+     *
+     * @param chunkData     not null
+     * @param trnsChunkData can be null
+     * @param index         color index
+     * @param color         color
+     */
+    private void writeColor(byte[] chunkData, byte[] trnsChunkData, int index, Color color) {
+        int off = 8 + index * 3;
+        chunkData[off++] = (byte) (color.getRed() & 0xFF);
+        chunkData[off++] = (byte) (color.getGreen() & 0xFF);
+        chunkData[off] = (byte) (color.getBlue() & 0xFF);
+        if (trnsChunkData != null && index < trnsChunkData.length) {
+            trnsChunkData[index] = (byte) (color.getAlpha() & 0xFF);
+        }
     }
 
     private static class Palette {
@@ -123,54 +157,6 @@ public class PaletteOptimizer implements AngOptimizer {
         public Palette(int plteIndex, int trnsIndex) {
             this.plteIndex = plteIndex;
             this.trnsIndex = trnsIndex;
-        }
-    }
-
-    private static class Color {
-        private byte[] data;
-        private int offset;
-        private byte[] alpha;
-        private int aOff;
-
-        public Color(byte[] data, byte[] alpha, int index) {
-            this.data = data;
-            this.offset = 8 + index * 3;
-            this.alpha = alpha;
-            this.aOff = index;
-        }
-
-        byte getAlpha() {
-            if (aOff < alpha.length) return alpha[aOff];
-            else return (byte) 0xff;
-        }
-
-        public boolean sameAs(Color color) {
-            int diff = Math.abs(this.getAlpha() - color.getAlpha());
-            diff += Math.abs(this.data[this.offset] - color.data[color.offset]);
-            diff += Math.abs(this.data[this.offset + 1] - color.data[color.offset + 1]);
-            diff += Math.abs(this.data[this.offset + 2] - color.data[color.offset + 2]);
-            return diff <= 0;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj instanceof Color) {
-                Color color = (Color) obj;
-                return this.data[this.offset] == color.data[color.offset]
-                        && this.data[this.offset + 1] == color.data[color.offset + 1]
-                        && this.data[this.offset + 2] == color.data[color.offset + 2]
-                        && this.getAlpha() == color.getAlpha();
-            }
-            return false;
-        }
-
-        @Override
-        public int hashCode() {
-            int color = getAlpha() << 24;
-            color += (data[offset] & 0xFF) << 16;
-            color += (data[offset + 1] & 0xFF) << 8;
-            color += (data[offset + 2] & 0xFF);
-            return color;
         }
     }
 }
