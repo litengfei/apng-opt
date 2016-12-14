@@ -7,7 +7,9 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 
 import static li.tengfei.apng.base.ApngConst.*;
 
@@ -25,9 +27,66 @@ public class PaletteOptimizer implements AngOptimizer {
 
     @Override
     public AngData optimize(AngData ang) {
-        ArrayList<Palette> palettes = genPalettes(ang);
-        palettes = optmizePalette(palettes);
+        colorReduce(ang);
+        //ArrayList<Palette> palettes = genPalettes(ang);
+        //palettes = optmizePalette(palettes);
         return null;
+    }
+
+    /**
+     * reduce colors
+     */
+    private void colorReduce(AngData ang) {
+        int chunkIndex = -1;
+        int plteIndex = -1;
+        int trnsIndex = -1;
+        int allCount = 0;
+        HashMap<Color, Integer> colors = new HashMap<>();
+        for (AngChunkData chunk : ang.getChunks()) {
+            chunkIndex++;
+            switch (chunk.getTypeCode()) {
+                case CODE_PLTE:
+                    plteIndex = chunkIndex;
+                    continue;
+                case CODE_tRNS:
+                    trnsIndex = chunkIndex;
+                    continue;
+                case CODE_IDAT:
+                case CODE_fdAT:
+                    if (plteIndex >= 0) break;
+                default:
+                    continue;
+            }
+
+            // get new appeared colors in this frame
+            byte[] data = ang.getChunks().get(plteIndex).getData();
+            byte[] alpha = ang.getChunks().get(trnsIndex).getData();
+            int count = colorsCount(data);
+            for (int i = 0; i < count; i++) {
+                allCount++;
+                Color newColor = readColor(data, alpha, i);
+                Integer sc = colors.get(newColor);
+                if (sc == null)
+                    sc = 1;
+                else
+                    sc++;
+                colors.put(newColor, sc);
+            }
+
+            plteIndex = -1;
+            trnsIndex = -1;
+        }
+
+        for (Color color : colors.keySet()) {
+            if (colors.get(color) <=1 ) continue;
+            log.debug(String.format("color: %d , count: %d",
+                    color.hashCode(),
+                    colors.get(color)));
+        }
+        log.debug(String.format("ditinct: %d , all: %d",
+                colors.size(),
+                allCount));
+
     }
 
 
@@ -42,7 +101,7 @@ public class PaletteOptimizer implements AngOptimizer {
             preColors.addAll(palettes.get(i - 1).colors);
             ArrayList<Color> curColors = palettes.get(i).colors;
             int count = 0;
-            for(Color color: curColors) {
+            for (Color color : curColors) {
                 if (preColors.contains(color)) count++;
             }
             sameCount.add(count);
