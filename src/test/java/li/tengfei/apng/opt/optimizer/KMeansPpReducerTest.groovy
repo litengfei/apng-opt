@@ -27,7 +27,7 @@ class KMeansPpReducerTest {
             }
         }
 
-        Map<Color, Color> mapping = new KMeansPpReducer().reduce(pixels, 2048)
+        Map<Color, Color> mapping = new KMeansPpReducer().reduce(pixels, 256)
         for (int h = 0; h < img.height; h++) {
             for (int w = 0; w < img.width; w++) {
                 img.setRGB(w, h, mapping.get(pixels[h * img.width + w]).getRGB())

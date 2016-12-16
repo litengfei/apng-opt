@@ -1,9 +1,7 @@
 package li.tengfei.apng.opt.optimizer;
 
 import java.awt.*;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 /**
  * K-Means++ Color Reducer
@@ -39,7 +37,7 @@ public class KMeansPpReducer implements ColorReducer {
         Color[] outColors = new Color[target];
 
         // init centers
-        initCenters(pixels, outColors);
+        initCenters(pixels, colors, counts, indexes, outColors);
 
         while (cluster(colors, outColors, indexes) > 0) {
             int changed = refreshCenters(colors, outColors, counts, indexes);
@@ -56,7 +54,7 @@ public class KMeansPpReducer implements ColorReducer {
     /**
      * Random init center points (colors)
      */
-    private void initCenters(Color[] pixels, Color[] centers) {
+    private void initCenters(Color[] pixels, Color[] colors, int[] counts, int[] indexes, Color[] centers) {
         Random rand = new Random();
         // random init centers
         for (int i = 0; i < centers.length; i++) {
@@ -70,6 +68,83 @@ public class KMeansPpReducer implements ColorReducer {
             }
             centers[i] = candidate;
         }
+
+        cluster(colors, centers, indexes);
+
+        splitMaxCenters(colors, counts, centers, indexes);
+    }
+
+    /**
+     * split max center
+     */
+    private void splitMaxCenters(Color[] colors, int[] counts, Color[] centers, int[] indexes) {
+        int[] centerCounts = new int[centers.length];
+        for (int i = 0; i < indexes.length; i++) {
+            centerCounts[indexes[i]] += counts[i];
+        }
+        ArrayList<IndexCount> indexCounts = new ArrayList<>(centerCounts.length);
+        for (int i = 0; i < centerCounts.length; i++) {
+            indexCounts.add(new IndexCount(i, centerCounts[i]));
+        }
+        Collections.sort(indexCounts);
+
+        for (int i = 0; i < indexCounts.size() / 2; i++) {
+            // split previous max count center, to replace last min count center, until max/3 < min
+            if (indexCounts.get(i).count / 3 < indexCounts.get(indexCounts.size() - i).count)
+                break;
+
+            int maxIndex = indexCounts.get(i).index;
+            int minIndex = indexCounts.get(indexCounts.size() - i).index;
+            splitMaxCenter(colors, counts, centers, indexes, maxIndex, minIndex);
+        }
+    }
+
+    /**
+     * split MAX CENTER centers[maxIdx] INTO centers[maxIdx], centers[minIdx]
+     */
+    private void splitMaxCenter(Color[] colors, int[] counts, Color[] centers, final int[] indexes, final int maxIdx, int minIdx) {
+        int r = 0, g = 0, b = 0, a = 0, pixels = 0;
+        int avgR = 0, avgG = 0, avgB = 0, avgA = 0;
+        int maxR = 0, maxG = 0, maxB = 0, maxA = 0;
+        int minR = 0, minG = 0, minB = 0, minA = 0;
+
+        // calculate avg ARGB
+        for (int i = 0; i < indexes.length; i++) {
+            if (indexes[i] != maxIdx) continue;
+            r += colors[i].getRed() * counts[i];
+            g += colors[i].getGreen() * counts[i];
+            b += colors[i].getBlue() * counts[i];
+            a += colors[i].getAlpha() * counts[i];
+            pixels += counts[i];
+        }
+        avgR = r / pixels;
+        avgG = g / pixels;
+        avgB = b / pixels;
+        avgA = a / pixels;
+
+        // calculate avg ARGB
+        for (int i = 0; i < indexes.length; i++) {
+            if (indexes[i] != maxIdx) continue;
+
+            r = colors[i].getRed();
+            g = colors[i].getGreen();
+            b = colors[i].getBlue();
+            a = colors[i].getAlpha();
+
+            if (r < avgR) minR += r * counts[i];
+            else maxR += r * counts[i];
+
+            if (g < avgG) minG += g * counts[i];
+            else maxG += g * counts[i];
+
+            if (b < avgB) minB += b * counts[i];
+            else maxB += b * counts[i];
+
+            if (a < avgA) minA += a * counts[i];
+            else maxA += a * counts[i];
+        }
+
+
     }
 
     /**
@@ -149,16 +224,6 @@ public class KMeansPpReducer implements ColorReducer {
                 }
             }
 
-            if (pixels == 0) {
-                pixels = centers.length;
-                for (Color c : centers) {
-                    r += c.getRed();
-                    g += c.getGreen();
-                    b += c.getBlue();
-                    a += c.getAlpha();
-                }
-            }
-
             Color center = new Color(r / pixels, g / pixels, b / pixels, a / pixels);
             if (!center.equals(centers[i])) {
                 changed++;
@@ -212,5 +277,20 @@ public class KMeansPpReducer implements ColorReducer {
         delta = a.getAlpha() - b.getAlpha();
         dist += delta * delta;
         return dist;
+    }
+
+    private static class IndexCount implements Comparable<IndexCount> {
+        int index;
+        int count;
+
+        public IndexCount(int index, int count) {
+            this.index = index;
+            this.count = count;
+        }
+
+        @Override
+        public int compareTo(IndexCount o) {
+            return o.count - this.count;
+        }
     }
 }
