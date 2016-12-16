@@ -7,9 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 
 import static li.tengfei.apng.base.ApngConst.*;
 
@@ -41,7 +39,7 @@ public class PaletteOptimizer implements AngOptimizer {
         int plteIndex = -1;
         int trnsIndex = -1;
         int allCount = 0;
-        HashMap<Color, Integer> colors = new HashMap<>();
+        ArrayList<Color> colors = new ArrayList<>();
         for (AngChunkData chunk : ang.getChunks()) {
             chunkIndex++;
             switch (chunk.getTypeCode()) {
@@ -64,29 +62,15 @@ public class PaletteOptimizer implements AngOptimizer {
             int count = colorsCount(data);
             for (int i = 0; i < count; i++) {
                 allCount++;
-                Color newColor = readColor(data, alpha, i);
-                Integer sc = colors.get(newColor);
-                if (sc == null)
-                    sc = 1;
-                else
-                    sc++;
-                colors.put(newColor, sc);
+                colors.add(readColor(data, alpha, i));
             }
 
             plteIndex = -1;
             trnsIndex = -1;
         }
-
-        for (Color color : colors.keySet()) {
-            if (colors.get(color) <=1 ) continue;
-            log.debug(String.format("color: %d , count: %d",
-                    color.hashCode(),
-                    colors.get(color)));
-        }
         log.debug(String.format("ditinct: %d , all: %d",
                 colors.size(),
                 allCount));
-
     }
 
 
