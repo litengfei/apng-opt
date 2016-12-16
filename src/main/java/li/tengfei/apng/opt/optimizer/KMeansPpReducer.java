@@ -13,6 +13,9 @@ import java.util.Random;
  */
 public class KMeansPpReducer implements ColorReducer {
 
+    /**
+     * reduce color use k-means++ algorithm
+     */
     @Override
     public Map<Color, Color> reduce(Color[] pixels, int target) {
         HashMap<Color, Integer> countMap = new HashMap<Color, Integer>();
@@ -35,17 +38,70 @@ public class KMeansPpReducer implements ColorReducer {
 
         Color[] outColors = new Color[target];
 
+        // init centers
+        initCenters(pixels, outColors);
 
-        return null;
+        while (cluster(colors, outColors, indexes) > 0)
+            refreshCenters(colors, outColors, counts, indexes);
+
+        HashMap<Color, Color> mapping = new HashMap<>(colors.length);
+        for (int j = 0; j < colors.length; j++) {
+            mapping.put(colors[j], outColors[indexes[j]]);
+        }
+        return mapping;
     }
 
     /**
      * init center points (colors)
      */
-    private int initCenters(Color[] colors, Color[] centers, int[] counts, int[] indexes) {
+    private void initCenters(Color[] pixels, Color[] centers) {
         Random rand = new Random();
-        // random first center
-        centers[0] = pixels[rand.nextInt(pixels.length)];
+        // random init centers
+        for (int i = 0; i < centers.length; i++) {
+            Color candidate = null;
+            while (candidate == null) {
+                candidate = pixels[rand.nextInt(pixels.length)];
+                // remove exists color
+                for (int j = 0; j < i; j++) {
+                    if (candidate.equals(centers[i])) candidate = null;
+                }
+            }
+            centers[i] = candidate;
+        }
+
+        // compute dx sum
+        int sumDx = 0;
+        int[] dxs = new int[pixels.length];
+        for (int i = 0; i < pixels.length; i++) {
+            int dx = Integer.MAX_VALUE;
+            for (Color c : centers) {
+                int d = distance(c, pixels[i]);
+                dx = dx > d ? d : dx;
+            }
+            dxs[i] = dx;
+            sumDx += dx;
+        }
+
+        // reInit centers
+        for (int i = 0; i < centers.length; i++) {
+            int sdx = sumDx;
+            Color candidate = null;
+            while (candidate == null) {
+                int r = rand.nextInt(pixels.length);
+                candidate = pixels[r];
+                sdx -= dxs[r];
+                if (sdx > 0) {
+                    candidate = null;
+                    continue;
+                }
+
+                // remove exists color
+                for (int j = 0; j < i; j++) {
+                    if (candidate.equals(centers[i])) candidate = null;
+                }
+            }
+            centers[i] = candidate;
+        }
     }
 
     /**
@@ -110,16 +166,6 @@ public class KMeansPpReducer implements ColorReducer {
         }
         return changed;
     }
-
-
-//    /**
-//     * return pixels count of all colors
-//     */
-//    private int pixelCount(Map<Color, Integer> colors) {
-//        int count = 0;
-//        for (int i : colors.values()) count += i;
-//        return count;
-//    }
 
     /**
      * calculate distance of two color

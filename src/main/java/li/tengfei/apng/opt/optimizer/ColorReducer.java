@@ -1,7 +1,6 @@
 package li.tengfei.apng.opt.optimizer;
 
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.Map;
 
 /**
@@ -19,8 +18,6 @@ public interface ColorReducer {
      * @return color reduce mapping
      */
     Map<Color, Color> reduce(Color[] pixels, int target);
-
-
 }
 
 
