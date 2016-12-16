@@ -41,8 +41,10 @@ public class KMeansPpReducer implements ColorReducer {
         // init centers
         initCenters(pixels, outColors);
 
-        while (cluster(colors, outColors, indexes) > 0)
-            refreshCenters(colors, outColors, counts, indexes);
+        while (cluster(colors, outColors, indexes) > 0) {
+            int changed = refreshCenters(colors, outColors, counts, indexes);
+            if (changed < outColors.length / 10) break;
+        }
 
         HashMap<Color, Color> mapping = new HashMap<>(colors.length);
         for (int j = 0; j < colors.length; j++) {
@@ -52,9 +54,28 @@ public class KMeansPpReducer implements ColorReducer {
     }
 
     /**
-     * init center points (colors)
+     * Random init center points (colors)
      */
     private void initCenters(Color[] pixels, Color[] centers) {
+        Random rand = new Random();
+        // random init centers
+        for (int i = 0; i < centers.length; i++) {
+            Color candidate = null;
+            while (candidate == null) {
+                candidate = pixels[rand.nextInt(pixels.length)];
+                // remove exists color
+                for (int j = 0; j < i; j++) {
+                    if (candidate.equals(centers[i])) candidate = null;
+                }
+            }
+            centers[i] = candidate;
+        }
+    }
+
+    /**
+     * KMeans++ init center points (colors)
+     */
+    private void initCentersKMeanspp(Color[] pixels, Color[] centers) {
         Random rand = new Random();
         // random init centers
         for (int i = 0; i < centers.length; i++) {
@@ -125,6 +146,16 @@ public class KMeansPpReducer implements ColorReducer {
                     b += colors[j].getBlue() * counts[j];
                     a += colors[j].getAlpha() * counts[j];
                     pixels += counts[j];
+                }
+            }
+
+            if (pixels == 0) {
+                pixels = centers.length;
+                for (Color c : centers) {
+                    r += c.getRed();
+                    g += c.getGreen();
+                    b += c.getBlue();
+                    a += c.getAlpha();
                 }
             }
 
