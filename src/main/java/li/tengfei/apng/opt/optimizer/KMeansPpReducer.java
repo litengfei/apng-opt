@@ -215,56 +215,28 @@ public class KMeansPpReducer implements ColorReducer {
     private int refreshCenters(Color[] colors, Color[] centers, int[] counts, int[] indexes) {
         int changed = 0;
         for (int i = 0; i < centers.length; i++) {
-            int minDis = Integer.MAX_VALUE;
-            Color center = null;
-            int r = 0, g = 0, b = 0, a = 0, pixels = 0;
-            int r2 = 0, g2 = 0, b2 = 0, a2 = 0, pixels2 = 0;
-            // compute center a,r,g,b
-            for (int j = 0; j < colors.length; j++) {
-                if (indexes[j] != i) continue;
-                int dist = distance(colors[j], centers[i]);
-                if (dist < minDis) {
-                    minDis = dist;
-                    center = colors[j];
+            long minDis = Long.MAX_VALUE;
+
+            Color center = colors[0];
+            // compute center
+            for (int x = 0; x < colors.length; x++) {
+                if (indexes[x] != i) continue;
+                long dis = 0;
+                for (int y = 0; y < colors.length; y++) {
+                    if (indexes[y] != i) continue;
+                    dis += distance(colors[x], colors[y]) * counts[y];
+                    if (dis >= minDis) break;
                 }
 
-                r += colors[j].getRed() * counts[j];
-                g += colors[j].getGreen() * counts[j];
-                b += colors[j].getBlue() * counts[j];
-                a += colors[j].getAlpha() * counts[j];
-                pixels += counts[j];
-
-                int c = (int) Math.sqrt(counts[j]);
-                r2 += colors[j].getRed() * c;
-                g2 += colors[j].getGreen() * c;
-                b2 += colors[j].getBlue() * c;
-                a2 += colors[j].getAlpha() * c;
-                pixels2 += c;
-
+                if (dis < minDis) {
+                    minDis = dis;
+                    center = colors[x];
+                }
             }
 
-            Color newCenter = new Color(r / pixels, g / pixels, b / pixels, a / pixels);
-            Color newCenter2 = new Color(r2 / pixels2, g2 / pixels2, b2 / pixels2, a2 / pixels2);
-
-            // compute center a,r,g,b
-            long dis1 = 0;
-            long dis2 = 0;
-            long dis3 = 0;
-            for (int j = 0; j < colors.length; j++) {
-                if (indexes[j] != i) continue;
-                dis1 += distance(colors[j], center);
-                dis2 += distance(colors[j], newCenter);
-                dis3 += distance(colors[j], newCenter2);
-            }
-
-            if (!center.equals(centers[i])) {
+             if (!center.equals(centers[i])) {
                 changed++;
-                if (dis3 <= dis2)
-                    centers[i] = newCenter2;
-                else if (dis2 <= dis1)
-                    centers[i] = newCenter;
-                else
-                    centers[i] = center;
+                centers[i] = center;
             }
         }
         return changed;
