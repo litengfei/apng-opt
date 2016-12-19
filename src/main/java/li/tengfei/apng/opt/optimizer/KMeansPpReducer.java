@@ -11,6 +11,7 @@ import java.util.*;
  * @since 16/12/14, 上午9:52
  */
 public class KMeansPpReducer implements ColorReducer {
+
     /**
      * reduce color use k-means++ algorithm
      */
@@ -39,24 +40,21 @@ public class KMeansPpReducer implements ColorReducer {
         // init centers
         initCenters(pixels, colors, counts, indexes, outColors);
 
-        double avgChanged = -1;
-        int iterCount = 0;
-        int overAvgCount = 0;
 
+        int lastMinChanged = Integer.MAX_VALUE;
+        int countOverLastMin = 0;
         while (cluster(colors, outColors, indexes) > 0) {
             splitMaxCenters(colors, counts, outColors, indexes, 0.0005f);
             int changed = refreshCenters(colors, outColors, counts, indexes);
 
-            // count continuous cover average times
-            if (changed >= avgChanged) overAvgCount++;
-            else overAvgCount = 0;
-            // if continuous cover average times > N, break iterate
-            if (overAvgCount > 20) break;
+            // if current changed <= minChanged appeared N times ago, then stop
+            if (countOverLastMin > 50 && changed <= lastMinChanged) break;
 
-            // compute average changed times
-            if (avgChanged < 0) avgChanged = changed;
-            else avgChanged = (avgChanged * iterCount + changed) / (iterCount + 1);
-            iterCount++;
+            if (changed < lastMinChanged) {
+                lastMinChanged = changed;
+                countOverLastMin = 0;
+            } else
+                countOverLastMin++;
         }
 
         HashMap<Color, Color> mapping = new HashMap<>(colors.length);
