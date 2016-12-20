@@ -28,24 +28,40 @@ public class KMeansPpReducer implements ColorReducer {
 
         Color[] colors = new Color[countMap.size()];
         int[] counts = new int[countMap.size()];
-        int[] indexes = new int[countMap.size()];
         int i = 0;
         for (Map.Entry<Color, Integer> e : countMap.entrySet()) {
             colors[i] = e.getKey();
             counts[i++] = e.getValue();
         }
-
+        int[] indexes = new int[countMap.size()];
         Color[] outColors = new Color[target];
 
-        // init centers
-        initCenters(pixels, colors, counts, indexes, outColors);
+        reduce(colors, counts, indexes, outColors);
 
+        HashMap<Color, Color> mapping = new HashMap<>(colors.length);
+        for (int j = 0; j < colors.length; j++) {
+            mapping.put(colors[j], outColors[indexes[j]]);
+        }
+        return mapping;
+    }
+
+    /**
+     * reduce colors to centers(outColors)
+     *
+     * @param colors  input colors
+     * @param counts  input colors' count
+     * @param indexes output colors' mapping
+     * @param centers output reduced colors
+     */
+    private void reduce(Color[] colors, int[] counts, int[] indexes, Color[] centers) {
+        // init centers
+        initCenters(colors, counts, indexes, centers);
 
         int lastMinChanged = Integer.MAX_VALUE;
         int countOverLastMin = 0;
-        while (cluster(colors, outColors, indexes) > 0) {
-            splitMaxCenters(colors, counts, outColors, indexes, 0.0005f);
-            int changed = refreshCenters(colors, outColors, counts, indexes);
+        while (cluster(colors, centers, indexes) > 0) {
+            splitMaxCenters(colors, counts, centers, indexes, 0.0005f);
+            int changed = refreshCenters(colors, centers, counts, indexes);
 
             // if current changed <= minChanged appeared N times ago, then stop
             if (countOverLastMin > 50 && changed <= lastMinChanged) break;
@@ -56,24 +72,27 @@ public class KMeansPpReducer implements ColorReducer {
             } else
                 countOverLastMin++;
         }
-
-        HashMap<Color, Color> mapping = new HashMap<>(colors.length);
-        for (int j = 0; j < colors.length; j++) {
-            mapping.put(colors[j], outColors[indexes[j]]);
-        }
-        return mapping;
     }
 
     /**
      * Random init center points (colors)
      */
-    private void initCenters(Color[] pixels, Color[] colors, int[] counts, int[] indexes, Color[] centers) {
+    private void initCenters(Color[] colors, int[] counts, int[] indexes, Color[] centers) {
         Random rand = new Random();
+        int pixels = 0;
+        for (int count : counts) pixels += count;
         // random init centers
         for (int i = 0; i < centers.length; i++) {
             Color candidate = null;
             while (candidate == null) {
-                candidate = pixels[rand.nextInt(pixels.length)];
+                int candidateCount = pixels;
+                int candidateIndex = 0;
+                while (candidateCount > 0) {
+                    candidateIndex = rand.nextInt(counts.length);
+                    candidateCount -= counts[candidateIndex];
+                }
+                candidate = colors[candidateIndex];
+
                 // remove exists color
                 for (int j = 0; j < i; j++) {
                     if (candidate.equals(centers[i])) candidate = null;
@@ -84,7 +103,7 @@ public class KMeansPpReducer implements ColorReducer {
 
         cluster(colors, centers, indexes);
 
-        splitMaxCenters(colors, counts, centers, indexes, 0.3f);
+        splitMaxCenters(colors, counts, centers, indexes, 0.005f);
     }
 
     /**
@@ -121,56 +140,36 @@ public class KMeansPpReducer implements ColorReducer {
      * @return split success or not
      */
     private boolean splitMaxCenter(Color[] colors, int[] counts, Color[] centers, final int[] indexes, final int maxIdx, int minIdx) {
-        int pixels = 0;
-        long dist = 0;
-        long avgDist = 0;
-        double maxR = 0, maxG = 0, maxB = 0, maxA = 0, maxPixels = 0;
-        double minR = 0, minG = 0, minB = 0, minA = 0, minPixels = 0;
-        Color center = centers[maxIdx];
 
-        // calculate avg ARGB
+        int subCount = 0;
         for (int i = 0; i < indexes.length; i++) {
             if (indexes[i] != maxIdx) continue;
-            dist += distance(center, colors[i]) * counts[i];
-            pixels += counts[i];
+            subCount++;
         }
-        avgDist = dist / pixels;
 
-        // calculate avg ARGB
+        if (subCount < 2) return false;
+
+        Color[] subColors = new Color[subCount];
+        int[] subCounts = new int[subCount];
+        int idx = 0;
         for (int i = 0; i < indexes.length; i++) {
             if (indexes[i] != maxIdx) continue;
-            double count = Math.sqrt(counts[i]);
-            if (distance(center, colors[i]) < avgDist) {
-                minR += colors[i].getRed() * count;
-                minG += colors[i].getGreen() * count;
-                minB += colors[i].getBlue() * count;
-                minA += colors[i].getAlpha() * count;
-                minPixels += count;
-            } else {
-                maxR += colors[i].getRed() * count;
-                maxG += colors[i].getGreen() * count;
-                maxB += colors[i].getBlue() * count;
-                maxA += colors[i].getAlpha() * count;
-                maxPixels += count;
-            }
+            subColors[idx] = colors[i];
+            subCounts[idx] = counts[i];
+            idx++;
         }
+        int[] subIndexes = new int[subCount];
+        Color[] subCenters = new Color[2];
 
-        Color minColor = new Color(
-                (int) (minR / minPixels),
-                (int) (minG / minPixels),
-                (int) (minB / minPixels),
-                (int) (minA / minPixels));
+        reduce(subColors, subCounts, subIndexes, subCenters);
 
-        Color maxColor = new Color(
-                (int) (maxR / maxPixels),
-                (int) (maxG / maxPixels),
-                (int) (maxB / maxPixels),
-                (int) (maxA / maxPixels));
+        Color aColor = subCenters[0];
+        Color bColor = subCenters[1];
 
-        boolean splitSucc = !minColor.equals(maxColor);
+        boolean splitSucc = !aColor.equals(bColor);
         if (splitSucc) {
-            centers[minIdx] = minColor;
-            centers[maxIdx] = maxColor;
+            centers[minIdx] = aColor;
+            centers[maxIdx] = bColor;
         }
         return splitSucc;
     }
