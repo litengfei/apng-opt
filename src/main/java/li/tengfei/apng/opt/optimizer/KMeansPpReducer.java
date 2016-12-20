@@ -160,76 +160,37 @@ public class KMeansPpReducer implements ColorReducer {
      * @return split success or not
      */
     private boolean splitMaxCenter(Color[] colors, int[] counts, Color[] centers, final int[] indexes, final int maxIdx, int minIdx) {
-        long R = 0, G = 0, B = 0, A = 0, pixels = 0;
-
-        // calculate avg ARGB
-        for (int i = 0; i < indexes.length; i++) {
-            if (indexes[i] != maxIdx) continue;
-            long count = counts[i];
-            R += colors[i].getRed() * count;
-            G += colors[i].getGreen() * count;
-            B += colors[i].getBlue() * count;
-            A += colors[i].getAlpha() * count;
-            pixels += count;
-        }
-
-        if (pixels == 0) return false;
-
-        double avgR, avgG, avgB, avgA;
-        double disR, disG, disB, disA;
-        double absR, absG, absB, absA;
+        int pixels = 0;
+        long dist = 0;
+        long avgDist = 0;
         long maxR = 0, maxG = 0, maxB = 0, maxA = 0, maxPixels = 0;
         long minR = 0, minG = 0, minB = 0, minA = 0, minPixels = 0;
-        avgR = R / pixels;
-        avgG = G / pixels;
-        avgB = B / pixels;
-        avgA = A / pixels;
+        Color center = centers[maxIdx];
+
         // calculate avg ARGB
         for (int i = 0; i < indexes.length; i++) {
             if (indexes[i] != maxIdx) continue;
-            R = colors[i].getRed();
-            G = colors[i].getGreen();
-            B = colors[i].getBlue();
-            A = colors[i].getAlpha();
+            dist += distance(center, colors[i]) * counts[i];
+            pixels += counts[i];
+        }
+        avgDist = dist / pixels;
 
-            disR = avgR - R;
-            disG = avgG - G;
-            disB = avgB - B;
-            disA = avgA - A;
-            absR = Math.abs(disR);
-            absG = Math.abs(disG);
-            absB = Math.abs(disB);
-            absA = Math.abs(disA);
-
-            double maxAbs = absR;
-            boolean isMax = absR == disR;
-
-            if (maxAbs < absG) {
-                maxAbs = absG;
-                isMax = absG == disG;
-            }
-            if (maxAbs < absB) {
-                maxAbs = absB;
-                isMax = absB == disB;
-            }
-            if (maxAbs < absA) {
-                isMax = absA == disA;
-            }
-
-            if (isMax) {
-                maxR += R;
-                maxG += G;
-                maxB += B;
-                maxA += A;
-                maxPixels += counts[i];
-                indexes[i] = maxIdx;
+        // calculate avg ARGB
+        for (int i = 0; i < indexes.length; i++) {
+            if (indexes[i] != maxIdx) continue;
+            int count = counts[i];
+            if (distance(center, colors[i]) < avgDist) {
+                minR += colors[i].getRed() * count;
+                minG += colors[i].getGreen() * count;
+                minB += colors[i].getBlue() * count;
+                minA += colors[i].getAlpha() * count;
+                minPixels += count;
             } else {
-                minR += R;
-                minG += G;
-                minB += B;
-                minA += A;
-                minPixels += counts[i];
-                indexes[i] = minIdx;
+                maxR += colors[i].getRed() * count;
+                maxG += colors[i].getGreen() * count;
+                maxB += colors[i].getBlue() * count;
+                maxA += colors[i].getAlpha() * count;
+                maxPixels += count;
             }
         }
 
