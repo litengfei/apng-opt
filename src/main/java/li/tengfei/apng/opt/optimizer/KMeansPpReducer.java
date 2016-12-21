@@ -33,25 +33,25 @@ public class KMeansPpReducer implements ColorReducer {
             }
         }
 
-        Color[] colors = new Color[countMap.size()];
+        RGBA[] colors = new RGBA[countMap.size()];
         int[] counts = new int[countMap.size()];
         int i = 0;
         for (Map.Entry<Color, Integer> e : countMap.entrySet()) {
-            colors[i] = e.getKey();
+            colors[i] = new RGBA(e.getKey());
             counts[i++] = e.getValue();
         }
         int[] indexes = new int[countMap.size()];
-        Color[] outColors = new Color[target];
+        RGBA[] outcolors = new RGBA[target];
 
-        reduce(colors, counts, indexes, outColors);
+        reduce(colors, counts, indexes, outcolors);
 
-        HashSet<Color> distinctOut = new HashSet<>();
-        distinctOut.addAll(Arrays.asList(outColors));
+        HashSet<RGBA> distinctOut = new HashSet<>();
+        distinctOut.addAll(Arrays.asList(outcolors));
         log.debug("finally output colors count: " + distinctOut.size());
 
         HashMap<Color, Color> mapping = new HashMap<>(colors.length);
         for (int j = 0; j < colors.length; j++) {
-            mapping.put(colors[j], outColors[indexes[j]]);
+            mapping.put(colors[j].asColor(), outcolors[indexes[j]].asColor());
         }
         return mapping;
     }
@@ -64,7 +64,7 @@ public class KMeansPpReducer implements ColorReducer {
      * @param indexes output colors' mapping
      * @param centers output reduced colors
      */
-    private void reduce(Color[] colors, int[] counts, int[] indexes, Color[] centers) {
+    private void reduce(RGBA[] colors, int[] counts, int[] indexes, RGBA[] centers) {
         // init centers
         initCenters(colors, counts, indexes, centers);
 
@@ -76,7 +76,7 @@ public class KMeansPpReducer implements ColorReducer {
             int changed = refreshCenters(colors, centers, counts, indexes);
 
             long millis = System.currentTimeMillis();
-            log.debug("rounds millis: " + (millis-lastMillis));
+            log.debug("rounds millis: " + (millis - lastMillis));
             lastMillis = millis;
 
             // if current changed <= minChanged appeared N times ago, then stop
@@ -94,15 +94,15 @@ public class KMeansPpReducer implements ColorReducer {
     /**
      * Random init center points (colors)
      */
-    private void initCenters(Color[] colors, int[] counts, int[] indexes, Color[] centers) {
+    private void initCenters(RGBA[] colors, int[] counts, int[] indexes, RGBA[] centers) {
         int pixels = 0;
         // random init centers
         for (int i = 0; i < centers.length; i++) {
-            Color candidate = null;
+            RGBA candidate = null;
             while (candidate == null) {
 
-                candidate = randomPickColor(colors, counts);
-                // remove exists color
+                candidate = randomPickRGBA(colors, counts);
+                // remove exists RGBA
                 for (int j = 0; j < i; j++) {
                     if (candidate.equals(centers[i])) candidate = null;
                 }
@@ -115,7 +115,7 @@ public class KMeansPpReducer implements ColorReducer {
         splitMaxCenters(colors, counts, centers, indexes, 0.033f);
     }
 
-    private Color randomPickColor(Color[] colors, int[] counts) {
+    private RGBA randomPickRGBA(RGBA[] colors, int[] counts) {
         int candidateCount = mPixels;
         int candidateIndex = 0;
         while (candidateCount > 0) {
@@ -130,7 +130,7 @@ public class KMeansPpReducer implements ColorReducer {
      *
      * @param splitRate split if the max * splitRate > min
      */
-    private void splitMaxCenters(Color[] colors, int[] counts, Color[] centers, int[] indexes, float splitRate) {
+    private void splitMaxCenters(RGBA[] colors, int[] counts, RGBA[] centers, int[] indexes, float splitRate) {
         int[] centerCounts = new int[centers.length];
         for (int i = 0; i < indexes.length; i++) {
             centerCounts[indexes[i]] += counts[i];
@@ -164,18 +164,18 @@ public class KMeansPpReducer implements ColorReducer {
      *
      * @return split success or not
      */
-    private boolean splitMaxCenter(Color[] colors, int[] counts, Color[] centers, final int[] indexes, final int maxIdx, int minIdx) {
+    private boolean splitMaxCenter(RGBA[] colors, int[] counts, RGBA[] centers, final int[] indexes, final int maxIdx, int minIdx) {
         int pixels = 0;
         long dist = 0;
         long avgDist = 0;
         long maxR = 0, maxG = 0, maxB = 0, maxA = 0, maxPixels = 0;
         long minR = 0, minG = 0, minB = 0, minA = 0, minPixels = 0;
-        Color center = centers[maxIdx];
+        RGBA center = centers[maxIdx];
 
         // calculate avg ARGB
         for (int i = 0; i < indexes.length; i++) {
             if (indexes[i] != maxIdx) continue;
-            dist += distance(center, colors[i]) * counts[i];
+            dist += center.dist(colors[i]) * counts[i];
             pixels += counts[i];
         }
         avgDist = dist / pixels;
@@ -184,100 +184,39 @@ public class KMeansPpReducer implements ColorReducer {
         for (int i = 0; i < indexes.length; i++) {
             if (indexes[i] != maxIdx) continue;
             int count = counts[i];
-            if (distance(center, colors[i]) < avgDist) {
-                minR += colors[i].getRed() * count;
-                minG += colors[i].getGreen() * count;
-                minB += colors[i].getBlue() * count;
-                minA += colors[i].getAlpha() * count;
+            if (center.dist(colors[i]) < avgDist) {
+                minR += colors[i].r * count;
+                minG += colors[i].g * count;
+                minB += colors[i].b * count;
+                minA += colors[i].a * count;
                 minPixels += count;
             } else {
-                maxR += colors[i].getRed() * count;
-                maxG += colors[i].getGreen() * count;
-                maxB += colors[i].getBlue() * count;
-                maxA += colors[i].getAlpha() * count;
+                maxR += colors[i].r * count;
+                maxG += colors[i].g * count;
+                maxB += colors[i].b * count;
+                maxA += colors[i].a * count;
                 maxPixels += count;
             }
         }
 
-        Color minColor = new Color(
+        RGBA minRGBA = new RGBA(
                 Math.round(minR / minPixels),
                 Math.round(minG / minPixels),
                 Math.round(minB / minPixels),
                 Math.round(minA / minPixels));
 
-        Color maxColor = new Color(
+        RGBA maxRGBA = new RGBA(
                 Math.round(maxR / maxPixels),
                 Math.round(maxG / maxPixels),
                 Math.round(maxB / maxPixels),
                 Math.round(maxA / maxPixels));
 
-        boolean splitSucc = !minColor.equals(maxColor);
+        boolean splitSucc = !minRGBA.equals(maxRGBA);
         if (splitSucc) {
-            centers[minIdx] = minColor;
-            centers[maxIdx] = maxColor;
+            centers[minIdx] = minRGBA;
+            centers[maxIdx] = maxRGBA;
         }
         return splitSucc;
-    }
-
-    /**
-     * | sumMin0 | countMin0 | sumMax0 | countMax0 | sumMin1 | countMin1 | sumMax1 | countMax1 | ...
-     */
-    private void countColor() {
-
-
-    }
-
-    /**
-     * KMeans++ init center points (colors)
-     */
-    private void initCentersKMeanspp(Color[] pixels, Color[] centers) {
-        Random rand = new Random();
-        // random init centers
-        for (int i = 0; i < centers.length; i++) {
-            Color candidate = null;
-            while (candidate == null) {
-                candidate = pixels[rand.nextInt(pixels.length)];
-                // remove exists color
-                for (int j = 0; j < i; j++) {
-                    if (candidate.equals(centers[i])) candidate = null;
-                }
-            }
-            centers[i] = candidate;
-        }
-
-        // compute dx sum
-        int sumDx = 0;
-        int[] dxs = new int[pixels.length];
-        for (int i = 0; i < pixels.length; i++) {
-            int dx = Integer.MAX_VALUE;
-            for (Color c : centers) {
-                int d = distance(c, pixels[i]);
-                dx = dx > d ? d : dx;
-            }
-            dxs[i] = dx;
-            sumDx += dx;
-        }
-
-        // reInit centers
-        for (int i = 0; i < centers.length; i++) {
-            int sdx = sumDx;
-            Color candidate = null;
-            while (candidate == null) {
-                int r = rand.nextInt(pixels.length);
-                candidate = pixels[r];
-                sdx -= dxs[r];
-                if (sdx > 0) {
-                    candidate = null;
-                    continue;
-                }
-
-                // remove exists color
-                for (int j = 0; j < i; j++) {
-                    if (candidate.equals(centers[i])) candidate = null;
-                }
-            }
-            centers[i] = candidate;
-        }
     }
 
     /**
@@ -289,7 +228,7 @@ public class KMeansPpReducer implements ColorReducer {
      * @param indexes color mapping to indexes
      * @return color center changed counts
      */
-    private int refreshCenters(Color[] colors, Color[] centers, int[] counts, int[] indexes) {
+    private int refreshCenters(RGBA[] colors, RGBA[] centers, int[] counts, int[] indexes) {
         int changed = 0;
         for (int i = 0; i < centers.length; i++) {
             long R = 0, G = 0, B = 0, A = 0, W = 0;
@@ -297,18 +236,18 @@ public class KMeansPpReducer implements ColorReducer {
             for (int j = 0; j < colors.length; j++) {
                 if (indexes[j] != i) continue;
                 long count = counts[j];
-                R += colors[j].getRed() * count;
-                G += colors[j].getGreen() * count;
-                B += colors[j].getBlue() * count;
-                A += colors[j].getAlpha() * count;
+                R += colors[j].r * count;
+                G += colors[j].g * count;
+                B += colors[j].b * count;
+                A += colors[j].a * count;
                 W += count;
             }
 
-            Color center;
+            RGBA center;
             if (W == 0) {
-                center = randomPickColor(colors, counts);
+                center = randomPickRGBA(colors, counts);
             } else {
-                center = new Color(
+                center = new RGBA(
                         Math.round(R / W),
                         Math.round(G / W),
                         Math.round(B / W),
@@ -332,14 +271,14 @@ public class KMeansPpReducer implements ColorReducer {
      * @return color mapping changed counts
      */
 
-    private int cluster(Color[] colors, Color[] centers, int[] indexes) {
+    private int cluster(RGBA[] colors, RGBA[] centers, int[] indexes) {
         int changed = 0;
         for (int i = 0; i < colors.length; i++) {
             int minDist = Integer.MAX_VALUE;
             int minIdx = 0;
 
             for (int j = 0; j < centers.length; j++) {
-                int dist = distance(colors[i], centers[j]);
+                int dist = colors[i].dist(centers[j]);
                 if (dist < minDist) {
                     minDist = dist;
                     minIdx = j;
@@ -355,28 +294,12 @@ public class KMeansPpReducer implements ColorReducer {
     }
 
     /**
-     * calculate distance of two color
-     */
-    private int distance(Color a, Color b) {
-        int dist = 0;
-        int delta = a.getRed() - b.getRed();
-        dist += delta * delta;
-        delta = a.getGreen() - b.getGreen();
-        dist += delta * delta;
-        delta = a.getBlue() - b.getBlue();
-        dist += delta * delta;
-        delta = a.getAlpha() - b.getAlpha();
-        dist += delta * delta;
-        return dist;
-    }
-
-    /**
      * @param colors
      * @param a
      * @param b
      * @return
      */
-    private int distance(Color[] colors, int a, int b) {
+    private int distance(RGBA[] colors, int a, int b) {
         if (a == b) return 0;
         else if (a > b) return distance(colors, b, a);
         return 0;
@@ -394,6 +317,57 @@ public class KMeansPpReducer implements ColorReducer {
         @Override
         public int compareTo(IndexCount o) {
             return o.count - this.count;
+        }
+    }
+
+    private static class RGBA {
+        byte r;
+        byte g;
+        byte b;
+        byte a;
+        int hash;
+
+        public RGBA(int r, int g, int b, int a) {
+            this.r = (byte) (r & 0xff);
+            this.g = (byte) (g & 0xff);
+            this.b = (byte) (b & 0xff);
+            this.a = (byte) (a & 0xff);
+            this.hash = (r & 0xff) << 24 | (g & 0xff) << 16 | (b & 0xff) << 8 | (a & 0xff);
+        }
+
+        public RGBA(Color color) {
+            this.r = (byte) (color.getRed() & 0xff);
+            this.g = (byte) (color.getGreen() & 0xff);
+            this.b = (byte) (color.getBlue() & 0xff);
+            this.a = (byte) (color.getAlpha() & 0xff);
+            this.hash = color.hashCode();
+        }
+
+        public Color asColor() {
+            return new Color(r & 0xff, g & 0xff, b & 0xff, a & 0xff);
+        }
+
+        public int dist(RGBA target) {
+            int dist = 0;
+            int delta = r - target.r;
+            dist += delta * delta;
+            delta = g - target.g;
+            dist += delta * delta;
+            delta = b - target.b;
+            dist += delta * delta;
+            delta = a - target.a;
+            dist += delta * delta;
+            return dist;
+        }
+
+        @Override
+        public int hashCode() {
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return (obj != null) && this.hash == ((RGBA) obj).hash;
         }
     }
 }
