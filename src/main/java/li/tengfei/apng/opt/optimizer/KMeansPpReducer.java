@@ -90,7 +90,10 @@ public class KMeansPpReducer implements ColorReducer {
             lastMillis = millis;
 
             // if current changed <= minChanged appeared N times ago, then stop
-            if (countOverLastMin > 50 && changed <= lastMinChanged) break;
+            if (countOverLastMin > 50 && changed <= lastMinChanged) {
+                cluster(colors, centers, indexes);
+                break;
+            }
 
             if (changed < lastMinChanged) {
                 lastMinChanged = changed;
@@ -174,56 +177,44 @@ public class KMeansPpReducer implements ColorReducer {
      * @return split success or not
      */
     private boolean splitMaxCenter(RGBA[] colors, int[] counts, RGBA[] centers, final int[] indexes, final int maxIdx, int minIdx) {
-        int pixels = 0;
-        long dist = 0;
-        long avgDist = 0;
-        long maxR = 0, maxG = 0, maxB = 0, maxA = 0, maxPixels = 0;
-        long minR = 0, minG = 0, minB = 0, minA = 0, minPixels = 0;
-        RGBA center = centers[maxIdx];
-
-        // calculate avg ARGB
+        // generate sub colors/counts/centers/indexes for split
+        int count = 0;
+        for (int idx : indexes) if (idx == maxIdx) count++;
+        RGBA[] subColors = new RGBA[count];
+        int[] subCounts = new int[count];
+        int[] subIndexes = new int[count];
+        RGBA[] subCenters = new RGBA[2];
+        int idx = 0;
         for (int i = 0; i < indexes.length; i++) {
             if (indexes[i] != maxIdx) continue;
-            dist += distance(center, colors[i]) * counts[i];
-            pixels += counts[i];
+            subColors[idx] = colors[i];
+            subCounts[idx++] = counts[i];
         }
-        avgDist = dist / pixels;
 
-        // calculate avg ARGB
-        for (int i = 0; i < indexes.length; i++) {
-            if (indexes[i] != maxIdx) continue;
-            int count = counts[i];
-            if (distance(center, colors[i]) < avgDist) {
-                minR += colors[i].r * count;
-                minG += colors[i].g * count;
-                minB += colors[i].b * count;
-                minA += colors[i].a * count;
-                minPixels += count;
-            } else {
-                maxR += colors[i].r * count;
-                maxG += colors[i].g * count;
-                maxB += colors[i].b * count;
-                maxA += colors[i].a * count;
-                maxPixels += count;
+        // get the longest distance two color
+        int maxDist = 0, maxX = 0, maxY = 0;
+        for (int x = 0; x < subColors.length; x++) {
+            for (int y = x + 1; y < subColors.length; y++) {
+                int dist = distance(subColors[x], subColors[y]);
+                if (dist > maxDist) {
+                    maxDist = dist;
+                    maxX = x;
+                    maxY = y;
+                }
             }
         }
+        // use the longest distance color as two center
+        subCenters[0] = subColors[maxX];
+        subCenters[1] = subColors[maxY];
 
-        RGBA minRGBA = new RGBA(
-                Math.round(minR / minPixels),
-                Math.round(minG / minPixels),
-                Math.round(minB / minPixels),
-                Math.round(minA / minPixels));
+        // do cluster and refresh centers
+        cluster(subColors, subCenters, subIndexes);
+        refreshCenters(subColors, subCenters, subCounts, subIndexes);
 
-        RGBA maxRGBA = new RGBA(
-                Math.round(maxR / maxPixels),
-                Math.round(maxG / maxPixels),
-                Math.round(maxB / maxPixels),
-                Math.round(maxA / maxPixels));
-
-        boolean splitSucc = !minRGBA.equals(maxRGBA);
+        boolean splitSucc = !subCenters[0].equals(subCenters[1]);
         if (splitSucc) {
-            centers[minIdx] = minRGBA;
-            centers[maxIdx] = maxRGBA;
+            centers[minIdx] = subCenters[0];
+            centers[maxIdx] = subCenters[1];
         }
         return splitSucc;
     }
