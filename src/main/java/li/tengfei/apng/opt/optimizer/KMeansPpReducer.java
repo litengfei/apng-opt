@@ -243,15 +243,21 @@ public class KMeansPpReducer implements ColorReducer {
                 W += count;
             }
 
-            RGBA center;
-            if (W == 0) {
-                center = randomPickRGBA(colors, counts);
-            } else {
-                center = new RGBA(
-                        Math.round(R / W),
-                        Math.round(G / W),
-                        Math.round(B / W),
-                        Math.round(A / W));
+            RGBA vCenter = new RGBA(
+                    Math.round(R / W),
+                    Math.round(G / W),
+                    Math.round(B / W),
+                    Math.round(A / W));
+
+            RGBA center = centers[i];
+            int minDist = Integer.MAX_VALUE;
+            for (int j = 0; j < colors.length; j++) {
+                if (indexes[j] != i) continue;
+                int dist = distance(vCenter, colors[j]);
+                if (dist < minDist) {
+                    minDist = dist;
+                    center = colors[j];
+                }
             }
 
             if (!center.equals(centers[i])) {
@@ -352,7 +358,7 @@ public class KMeansPpReducer implements ColorReducer {
             this.g = (byte) (g & 0xff);
             this.b = (byte) (b & 0xff);
             this.a = (byte) (a & 0xff);
-            this.hash = (r & 0xff) << 24 | (g & 0xff) << 16 | (b & 0xff) << 8 | (a & 0xff);
+            this.hash = (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff) | (a & 0xff) << 24;
         }
 
         public RGBA(Color color) {
