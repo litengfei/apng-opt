@@ -15,8 +15,11 @@ import java.util.*;
  */
 public class KMeansPpReducer implements ColorReducer {
     private static final Logger log = LoggerFactory.getLogger(KMeansPpReducer.class);
+    private static final int MAX_CACHE_DISTS = 1024 * 10; // 200M
     private Random rand = new Random();
     private int mPixels;
+    private int[][] mDists;
+    private RGBA[] mColors;
 
     /**
      * reduce color use k-means++ algorithm
@@ -46,7 +49,6 @@ public class KMeansPpReducer implements ColorReducer {
             colors[i] = new RGBA(colorCounts.get(i).color);
             counts[i] = colorCounts.get(i).count;
         }
-
 
         int[] indexes = new int[countMap.size()];
         RGBA[] outcolors = new RGBA[target];
@@ -108,7 +110,6 @@ public class KMeansPpReducer implements ColorReducer {
         for (int i = 0; i < centers.length; i++) {
             RGBA candidate = null;
             while (candidate == null) {
-
                 candidate = randomPickRGBA(colors, counts);
                 // remove exists RGBA
                 for (int j = 0; j < i; j++) {
@@ -324,6 +325,13 @@ public class KMeansPpReducer implements ColorReducer {
         if (a == b) return 0;
         else if (a > b) return distance(colors, b, a);
         return 0;
+    }
+
+    private void initDistCache(RGBA[] colors, int[] counts) {
+        int maxCount = colors.length < MAX_CACHE_DISTS ? colors.length : MAX_CACHE_DISTS;
+        for (int x = 0; x < maxCount; x++) {
+            //for(int y=)
+        }
     }
 
     private static class IndexCount implements Comparable<IndexCount> {
