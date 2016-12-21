@@ -23,6 +23,7 @@ public class KMeansPpReducer implements ColorReducer {
      */
     @Override
     public Map<Color, Color> reduce(Color[] pixels, int target) {
+        // count color appearance
         mPixels = pixels.length;
         HashMap<Color, Integer> countMap = new HashMap<Color, Integer>();
         for (Color p : pixels) {
@@ -33,13 +34,20 @@ public class KMeansPpReducer implements ColorReducer {
             }
         }
 
+        // set colors [ sorted by count ]
+        ArrayList<ColorCount> colorCounts = new ArrayList<>(countMap.size());
         RGBA[] colors = new RGBA[countMap.size()];
         int[] counts = new int[countMap.size()];
-        int i = 0;
         for (Map.Entry<Color, Integer> e : countMap.entrySet()) {
-            colors[i] = new RGBA(e.getKey());
-            counts[i++] = e.getValue();
+            colorCounts.add(new ColorCount(e.getKey(), e.getValue()));
         }
+        Collections.sort(colorCounts);
+        for (int i = 0; i < colorCounts.size(); i++) {
+            colors[i] = new RGBA(colorCounts.get(i).color);
+            counts[i] = colorCounts.get(i).count;
+        }
+
+
         int[] indexes = new int[countMap.size()];
         RGBA[] outcolors = new RGBA[target];
 
@@ -175,7 +183,7 @@ public class KMeansPpReducer implements ColorReducer {
         // calculate avg ARGB
         for (int i = 0; i < indexes.length; i++) {
             if (indexes[i] != maxIdx) continue;
-            dist += center.dist(colors[i]) * counts[i];
+            dist += distance(center, colors[i]) * counts[i];
             pixels += counts[i];
         }
         avgDist = dist / pixels;
@@ -184,7 +192,7 @@ public class KMeansPpReducer implements ColorReducer {
         for (int i = 0; i < indexes.length; i++) {
             if (indexes[i] != maxIdx) continue;
             int count = counts[i];
-            if (center.dist(colors[i]) < avgDist) {
+            if (distance(center, colors[i]) < avgDist) {
                 minR += colors[i].r * count;
                 minG += colors[i].g * count;
                 minB += colors[i].b * count;
@@ -278,7 +286,7 @@ public class KMeansPpReducer implements ColorReducer {
             int minIdx = 0;
 
             for (int j = 0; j < centers.length; j++) {
-                int dist = colors[i].dist(centers[j]);
+                int dist = distance(colors[i], centers[j]);
                 if (dist < minDist) {
                     minDist = dist;
                     minIdx = j;
@@ -291,6 +299,19 @@ public class KMeansPpReducer implements ColorReducer {
             }
         }
         return changed;
+    }
+
+    public int distance(RGBA a, RGBA b) {
+        int dist = 0;
+        int delta = a.r - b.r;
+        dist += delta * delta;
+        delta = a.g - b.g;
+        dist += delta * delta;
+        delta = a.b - b.b;
+        dist += delta * delta;
+        delta = a.a - b.a;
+        dist += delta * delta;
+        return dist;
     }
 
     /**
@@ -347,19 +368,6 @@ public class KMeansPpReducer implements ColorReducer {
             return new Color(r & 0xff, g & 0xff, b & 0xff, a & 0xff);
         }
 
-        public int dist(RGBA target) {
-            int dist = 0;
-            int delta = r - target.r;
-            dist += delta * delta;
-            delta = g - target.g;
-            dist += delta * delta;
-            delta = b - target.b;
-            dist += delta * delta;
-            delta = a - target.a;
-            dist += delta * delta;
-            return dist;
-        }
-
         @Override
         public int hashCode() {
             return hash;
@@ -368,6 +376,21 @@ public class KMeansPpReducer implements ColorReducer {
         @Override
         public boolean equals(Object obj) {
             return (obj != null) && this.hash == ((RGBA) obj).hash;
+        }
+    }
+
+    private static class ColorCount implements Comparable<ColorCount> {
+        Color color;
+        int count;
+
+        public ColorCount(Color color, int count) {
+            this.color = color;
+            this.count = count;
+        }
+
+        @Override
+        public int compareTo(ColorCount o) {
+            return o.count - this.count;
         }
     }
 }
