@@ -70,9 +70,14 @@ public class KMeansPpReducer implements ColorReducer {
 
         int lastMinChanged = Integer.MAX_VALUE;
         int countOverLastMin = 0;
+        long lastMillis = System.currentTimeMillis();
         while (cluster(colors, centers, indexes) > 0) {
             //splitMaxCenters(colors, counts, centers, indexes, 0.000005f);
             int changed = refreshCenters(colors, centers, counts, indexes);
+
+            long millis = System.currentTimeMillis();
+            log.debug("rounds millis: " + (millis-lastMillis));
+            lastMillis = millis;
 
             // if current changed <= minChanged appeared N times ago, then stop
             if (countOverLastMin > 50 && changed <= lastMinChanged) break;
