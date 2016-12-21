@@ -18,8 +18,6 @@ public class KMeansPpReducer implements ColorReducer {
     private static final int MAX_CACHE_DISTS = 1024 * 10; // 200M
     private Random rand = new Random();
     private int mPixels;
-    private int[][] mDists;
-    private Color[] mColors;
 
     /**
      * reduce color use k-means++ algorithm
@@ -152,7 +150,6 @@ public class KMeansPpReducer implements ColorReducer {
             indexCounts.add(new IndexCount(i, centerCounts[i]));
         }
         Collections.sort(indexCounts);
-
 
         for (int maxPos = 0, minPos = indexCounts.size() - 1; maxPos < minPos; maxPos++) {
             // split previous max count center, to replace last min count center, until max * splitRate < min
@@ -310,25 +307,6 @@ public class KMeansPpReducer implements ColorReducer {
         delta = a.getAlpha() - b.getAlpha();
         dist += delta * delta;
         return dist;
-    }
-
-    /**
-     * @param colors
-     * @param a
-     * @param b
-     * @return
-     */
-    private int distance(Color[] colors, int a, int b) {
-        if (a == b) return 0;
-        else if (a > b) return distance(colors, b, a);
-        return 0;
-    }
-
-    private void initDistCache(Color[] colors, int[] counts) {
-        int maxCount = colors.length < MAX_CACHE_DISTS ? colors.length : MAX_CACHE_DISTS;
-        for (int x = 0; x < maxCount; x++) {
-            //for(int y=)
-        }
     }
 
     private static class IndexCount implements Comparable<IndexCount> {
