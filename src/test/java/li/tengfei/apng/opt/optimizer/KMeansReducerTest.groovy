@@ -16,14 +16,31 @@ import static li.tengfei.apng.opt.shrinker.TestConst.getWORK_DIR
 class KMeansReducerTest {
     @Test
     void testReduce() {
-        int target = 512
+        int target = 256
         MedianCutReducer medianCut = new MedianCutReducer()
-        reduce(medianCut, target, "medianCut")
         KMeansReducer kmeans = new KMeansReducer()
-        reduce(kmeans, target, "kmeans")
-        kmeans.initReducer = medianCut
-        reduce(kmeans, target, "kmeans-mc")
+
+        while (target <= 2048) {
+            reduce(medianCut, target, "medianCut")
+            kmeans.initReducer = null
+            reduce(kmeans, target, "kmeans")
+            kmeans.initReducer = medianCut
+            reduce(kmeans, target, "kmeans-mc")
+            target = target + 256
+        }
     }
+
+//    medianCut -       5070
+//    kmeans -         18656
+//    kmeans-mc -      12433
+
+//    medianCut -       1787
+//    kmeans -         49072
+//    kmeans-mc -      45195
+
+//    medianCut -       1591
+//    kmeans -        222768
+//    kmeans-mc -      38185
 
     void reduce(ColorReducer reducer, int target, String tagName) {
         long start = System.currentTimeMillis()
