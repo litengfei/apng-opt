@@ -8,16 +8,25 @@ import java.util.*;
 
 
 /**
- * K-Means++ Color Reducer
+ * K-Means Color Reducer
  *
  * @author ltf
  * @since 16/12/14, 上午9:52
  */
-public class KMeansPpReducer implements ColorReducer {
-    private static final Logger log = LoggerFactory.getLogger(KMeansPpReducer.class);
+public class KMeansReducer implements ColorReducer {
+    private static final Logger log = LoggerFactory.getLogger(KMeansReducer.class);
     private static final int MAX_CACHE_DISTS = 1024 * 10; // 200M
     private Random rand = new Random();
     private int mPixels;
+    private ColorReducer initReducer;
+
+    public ColorReducer getInitReducer() {
+        return initReducer;
+    }
+
+    public void setInitReducer(ColorReducer initReducer) {
+        this.initReducer = initReducer;
+    }
 
     /**
      * reduce color use k-means++ algorithm
@@ -49,17 +58,32 @@ public class KMeansPpReducer implements ColorReducer {
         }
 
         int[] indexes = new int[countMap.size()];
-        Color[] outcolors = new Color[target];
+        Color[] centers = new Color[target];
 
-        reduce(colors, counts, indexes, outcolors);
+
+        // init centers
+        if (initReducer == null) {
+            // use inner center init method
+            initCenters(colors, counts, indexes, centers);
+        } else {
+            // use out center init method
+            Map<Color, Color> mapping = initReducer.reduce(pixels, target);
+            Set<Color> cs = new HashSet<>(target);
+            for (Color c : mapping.values()) cs.add(c);
+            int i = 0;
+            for (Color c : cs) centers[i++] = c;
+            while (i < target) centers[i++] = randomPickColor(colors, counts);
+        }
+
+        reduce(colors, counts, indexes, centers);
 
         HashSet<Color> distinctOut = new HashSet<>();
-        distinctOut.addAll(Arrays.asList(outcolors));
+        distinctOut.addAll(Arrays.asList(centers));
         log.debug("finally output colors count: " + distinctOut.size());
 
         HashMap<Color, Color> mapping = new HashMap<>(colors.length);
         for (int j = 0; j < colors.length; j++) {
-            mapping.put(colors[j], outcolors[indexes[j]]);
+            mapping.put(colors[j], centers[indexes[j]]);
         }
         return mapping;
     }
@@ -73,9 +97,6 @@ public class KMeansPpReducer implements ColorReducer {
      * @param centers output reduced colors
      */
     private void reduce(Color[] colors, int[] counts, int[] indexes, Color[] centers) {
-        // init centers
-        initCenters(colors, counts, indexes, centers);
-
         int lastMinChanged = Integer.MAX_VALUE;
         int countOverLastMin = 0;
         long lastMillis = System.currentTimeMillis();
