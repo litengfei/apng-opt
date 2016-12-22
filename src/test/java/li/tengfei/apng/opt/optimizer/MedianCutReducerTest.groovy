@@ -27,7 +27,7 @@ class MedianCutReducerTest {
             }
         }
 
-        Map<Color, Color> mapping = new MedianCutReducer().reduce(pixels, 256)
+        Map<Color, Color> mapping = new MedianCutReducer().reduce(pixels, 2048)
         for (int h = 0; h < img.height; h++) {
             for (int w = 0; w < img.width; w++) {
                 img.setRGB(w, h, mapping.get(pixels[h * img.width + w]).getRGB())

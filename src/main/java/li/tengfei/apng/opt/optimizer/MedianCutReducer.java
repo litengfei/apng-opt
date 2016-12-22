@@ -176,18 +176,19 @@ public class MedianCutReducer implements ColorReducer {
         private int count;
 
         Reducer(NColor[] colors) {
-            add(colors);
+            add(new Node(colors));
         }
 
         /**
          * add colors into linked list just before the one who's rank is little than this
          */
-        private void add(NColor[] colors) {
+        private void add(Node node) {
+            node.pre = null;
+            node.next = null;
             if (head == null) {
-                head = new Node(colors);
+                head = node;
             } else {
                 Node next = head;
-                Node node = new Node(colors);
                 // add new node before the one who's rank is little than this
                 for (; ; ) {
                     if (next.rank < node.rank) {
@@ -222,14 +223,22 @@ public class MedianCutReducer implements ColorReducer {
          * @return split success or not
          */
         boolean split() {
-            NColor[] colors = poll().colors;
             NColor[][] subColors = new NColor[2][];
-            boolean succ = medianCut(colors, subColors);
-            if (succ) {
-                add(subColors[0]);
-                add(subColors[1]);
-            } else {
-                add(colors);
+            boolean succ = false;
+            for (; ; ) {
+                Node node = poll();
+                if (node == null || node.rank == Node.CANT_CUT_RANK) {
+                    break;
+                }
+                succ = medianCut(node.colors, subColors);
+                if (succ) {
+                    add(new Node(subColors[0]));
+                    add(new Node(subColors[1]));
+                    break;
+                } else {
+                    node.setCanCut();
+                    add(node);
+                }
             }
             return succ;
         }
@@ -265,14 +274,19 @@ public class MedianCutReducer implements ColorReducer {
          * 2-way chain Node contains colors and rank
          */
         private static class Node {
+            static final int CANT_CUT_RANK = Integer.MIN_VALUE;
             final NColor[] colors;
-            final int rank;
+            int rank;
             Node next;
             Node pre;
 
             Node(NColor[] colors) {
                 this.colors = colors;
                 rank = ranking(colors);
+            }
+
+            private void setCanCut() {
+                rank = CANT_CUT_RANK;
             }
         }
     }
