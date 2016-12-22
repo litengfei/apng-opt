@@ -32,52 +32,30 @@ public class MedianCutReducer implements ColorReducer {
      * @return medianCut success or not
      */
     private static boolean medianCut(NColor[] colors, NColor[][] subs) {
-        long[] channelSums = new long[COLOR_BYTES];
-        long[] channelDists = new long[COLOR_BYTES];
-        double[] channelAvgs = new double[COLOR_BYTES];
-        int count = 0;
-
-        // calculate average channel value
-        for (NColor color : colors) {
-            for (int i = 0; i < COLOR_BYTES; i++) {
-                channelSums[i] += getChannelValue(color, i) * color.count;
-            }
-            count += color.count;
-        }
-        for (int i = 0; i < COLOR_BYTES; i++) {
-            channelAvgs[i] = (double) channelSums[i] / count;
-        }
-
-        // calculate channel distances
-        for (NColor color : colors) {
-            for (int i = 0; i < COLOR_BYTES; i++) {
-                channelDists[i] += Math.round(Math.abs((getChannelValue(color, i) - channelAvgs[i])) * color.count);
+        // get the longest distance two color
+        int maxDist = 0, maxX = 0, maxY = 0;
+        for (int x = 0; x < colors.length; x++) {
+            for (int y = x + 1; y < colors.length; y++) {
+                int dist = distance(colors[x], colors[y]);
+                if (dist > maxDist) {
+                    maxDist = dist;
+                    maxX = x;
+                    maxY = y;
+                }
             }
         }
-
-        // select cut channel
-        int cutChannel = 0;
-        double cutAvg;
-        long maxDist = 0;
-        for (int i = 0; i < COLOR_BYTES; i++) {
-            if (maxDist < channelDists[i]) {
-                maxDist = channelDists[i];
-                cutChannel = i;
-            }
-        }
-        cutAvg = channelAvgs[cutChannel];
+        NColor X = colors[maxX];
+        NColor Y = colors[maxY];
 
         // median cut colors
         ArrayList<NColor> subA = new ArrayList<>();
         ArrayList<NColor> subB = new ArrayList<>();
         for (NColor color : colors) {
-            int channelValue = getChannelValue(color, cutChannel);
-            if (channelValue < cutAvg) subA.add(color);
+            if (distance(color, X) < distance(color, Y)) subA.add(color);
             else subB.add(color);
         }
 
         if (subA.size() == 0 || subB.size() == 0) return false;
-
 
         subs[0] = new NColor[subA.size()];
         subs[1] = new NColor[subB.size()];
@@ -288,23 +266,6 @@ public class MedianCutReducer implements ColorReducer {
             private void setCanCut() {
                 rank = CANT_CUT_RANK;
             }
-        }
-    }
-
-    /**
-     * s
-     */
-
-    private static class MinMaxCounter {
-        private int[] mMinMax = new int[COLOR_BYTES * 2];
-
-        public void update(NColor color) {
-
-        }
-
-        private void updateMinMax(int index, int value) {
-            if (mMinMax[index] > value) mMinMax[index] = value;
-            if (mMinMax[index + COLOR_BYTES] < value) mMinMax[index + COLOR_BYTES] = value;
         }
     }
 }
