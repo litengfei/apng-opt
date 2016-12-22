@@ -228,7 +228,7 @@ public class KMeansPpReducer implements ColorReducer {
     private int refreshCenters(Color[] colors, Color[] centers, int[] counts, int[] indexes) {
         int changed = 0;
         for (int i = 0; i < centers.length; i++) {
-            long R = 0, G = 0, B = 0, A = 0, W = 0;
+            double R = 0, G = 0, B = 0, A = 0, W = 0;
             // compute center a,r,g,b
             for (int j = 0; j < colors.length; j++) {
                 if (indexes[j] != i) continue;
@@ -241,10 +241,10 @@ public class KMeansPpReducer implements ColorReducer {
             }
 
             Color vCenter = new Color(
-                    Math.round(R / W),
-                    Math.round(G / W),
-                    Math.round(B / W),
-                    Math.round(A / W));
+                    (int) Math.round(R / W),
+                    (int) Math.round(G / W),
+                    (int) Math.round(B / W),
+                    (int) Math.round(A / W));
 
             Color center = centers[i];
             int minDist = Integer.MAX_VALUE;
