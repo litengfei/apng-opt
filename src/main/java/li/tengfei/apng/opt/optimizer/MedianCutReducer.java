@@ -19,7 +19,9 @@ public class MedianCutReducer implements ColorReducer {
      * Cut Ranking, the biggest one is cut first
      */
     private static int ranking(NColor[] colors) {
-        return colors.length;
+        int counts = 0;
+        for (NColor color : colors) counts += color.count;
+        return counts;
     }
 
     /**
