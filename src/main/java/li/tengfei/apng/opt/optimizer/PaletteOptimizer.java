@@ -1,5 +1,7 @@
 package li.tengfei.apng.opt.optimizer;
 
+import li.tengfei.apng.base.ApngIHDRChunk;
+import li.tengfei.apng.ext.ByteArrayPngChunk;
 import li.tengfei.apng.opt.builder.AngChunkData;
 import li.tengfei.apng.opt.builder.AngData;
 import org.slf4j.Logger;
@@ -8,6 +10,9 @@ import org.slf4j.LoggerFactory;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.IllegalFormatFlagsException;
+import java.util.zip.DataFormatException;
+import java.util.zip.Inflater;
 
 import static li.tengfei.apng.base.ApngConst.*;
 
@@ -18,6 +23,7 @@ import static li.tengfei.apng.base.ApngConst.*;
  * @since 16/12/12, 下午2:05
  */
 public class PaletteOptimizer implements AngOptimizer {
+
     private static final int COLOR_B = 0x1;
     private static final int COLOR_G = 0x100;
     private static final int COLOR_R = 0x10000;
@@ -25,7 +31,11 @@ public class PaletteOptimizer implements AngOptimizer {
 
     @Override
     public AngData optimize(AngData ang) {
-        colorReduce(ang);
+        try {
+            colorReduce(ang);
+        } catch (DataFormatException e) {
+            e.printStackTrace();
+        }
         //ArrayList<Palette> palettes = genPalettes(ang);
         //palettes = optmizePalette(palettes);
         return null;
@@ -34,15 +44,29 @@ public class PaletteOptimizer implements AngOptimizer {
     /**
      * reduce colors
      */
-    private void colorReduce(AngData ang) {
+    private void colorReduce(AngData ang) throws DataFormatException {
         int chunkIndex = -1;
+        int ihdrIndex = -1;
         int plteIndex = -1;
         int trnsIndex = -1;
         int allCount = 0;
-        ArrayList<Color> colors = new ArrayList<>();
+        ArrayList<FrameImage> frameImages = new ArrayList<>();
+        ApngIHDRChunk ihdr = new ApngIHDRChunk();
         for (AngChunkData chunk : ang.getChunks()) {
             chunkIndex++;
             switch (chunk.getTypeCode()) {
+                case CODE_IHDR:
+                    ihdr.parse(new ByteArrayPngChunk(chunk.getData()));
+                    if (ihdr.getColorType() != 3)
+                        throw new IllegalFormatFlagsException("colorType=" + ihdr.getColorType());
+                    if (ihdr.getFilterMethod() != 0)
+                        throw new IllegalFormatFlagsException("FilterMethod=" + ihdr.getFilterMethod());
+                    if (ihdr.getInterlaceMethod() != 0)
+                        throw new IllegalFormatFlagsException("InterlaceMethod=" + ihdr.getInterlaceMethod());
+                    if (ihdr.getCompressMethod() != 0)
+                        throw new IllegalFormatFlagsException("CompressMethod=" + ihdr.getCompressMethod());
+                    ihdrIndex = chunkIndex;
+                    continue;
                 case CODE_PLTE:
                     plteIndex = chunkIndex;
                     continue;
@@ -60,19 +84,87 @@ public class PaletteOptimizer implements AngOptimizer {
             byte[] data = ang.getChunks().get(plteIndex).getData();
             byte[] alpha = ang.getChunks().get(trnsIndex).getData();
             int count = colorsCount(data);
+            Color[] colorTable = new Color[count];
             for (int i = 0; i < count; i++) {
                 allCount++;
-                colors.add(readColor(data, alpha, i));
+                colorTable[0] = readColor(data, alpha, i);
             }
+
+
+            // decompress image pixels
+            byte[] img = unzipImageDAT(chunk.getData());
+            frameImages.add(new FrameImage(
+                    decodeImagePixels(img, ihdr.getBitDepth(), colorTable),
+                    ihdrIndex, plteIndex, trnsIndex, chunkIndex
+            ));
+
+//            log.debug(String.format("%d %d %d %d %d",
+//                    ihdr.getBitDepth(),
+//                    ihdr.getColorType(),
+//                    ihdr.getCompressMethod(),
+//                    ihdr.getFilterMethod(),
+//                    ihdr.getInterlaceMethod()));
 
             plteIndex = -1;
             trnsIndex = -1;
         }
-        log.debug(String.format("ditinct: %d , all: %d",
-                colors.size(),
+
+        int pixelsCount = 0;
+        for (FrameImage frame : frameImages) pixelsCount += frame.pixels.length;
+        Color[] pixels = new Color[pixelsCount];
+        int pixelsIdx = 0;
+        for (FrameImage frame : frameImages) {
+            System.arraycopy(frame.pixels, 0, pixels, pixelsIdx, frame.pixels.length);
+            pixelsIdx += frame.pixels.length;
+        }
+
+
+        log.debug(String.format("pixels: %d , colors: %d",
+                pixels.length,
                 allCount));
     }
 
+    /**
+     * decompress IDAT/fDAT
+     */
+    private byte[] unzipImageDAT(byte[] chunkDAT) throws DataFormatException {
+        // Decompress the bytes
+        Inflater inflater = new Inflater();
+        inflater.setInput(chunkDAT, 8, chunkDAT.length - 12);
+        byte[] data = new byte[chunkDAT.length];
+        int len = inflater.inflate(data);
+        inflater.end();
+        byte[] result = new byte[len];
+        System.arraycopy(data, 0, result, 0, len);
+        return result;
+    }
+
+    /**
+     * decode image pixels
+     */
+    private Color[] decodeImagePixels(byte[] imageData, final int bitDepth, Color[] colorTable) {
+        Color[] pixels = new Color[imageData.length * 8 / bitDepth];
+        int i = 0;
+        for (byte b : imageData) {
+            switch (bitDepth) {
+                case 1:
+                    for (int x = 0; x < 8; x++) pixels[i++] = colorTable[b >> 1 & 0x1];
+                    continue;
+                case 2:
+                    for (int x = 0; x < 4; x++) pixels[i++] = colorTable[b >> 2 & 0x3];
+                    continue;
+                case 4:
+                    for (int x = 0; x < 2; x++) pixels[i++] = colorTable[b >> 4 & 0xF];
+                    continue;
+                case 8:
+                    pixels[i++] = colorTable[b & 0xFF];
+                    continue;
+                default:
+                    throw new IllegalFormatFlagsException("bitDepth=" + bitDepth);
+            }
+        }
+        return pixels;
+    }
 
     /**
      * optimize colors order in palettes for better patch reduce
@@ -184,7 +276,8 @@ public class PaletteOptimizer implements AngOptimizer {
         int off = 8 + index * 3;
         return new Color(plteChunkData[off] & 0xFF,
                 plteChunkData[off + 1] & 0xFF,
-                plteChunkData[off + 2] & 0xFF);
+                plteChunkData[off + 2] & 0xFF,
+                alpha & 0xFF);
     }
 
     /**
@@ -213,6 +306,22 @@ public class PaletteOptimizer implements AngOptimizer {
         public Palette(int plteIndex, int trnsIndex) {
             this.plteIndex = plteIndex;
             this.trnsIndex = trnsIndex;
+        }
+    }
+
+    private static class FrameImage {
+        Color[] pixels;
+        int ihdrIndex;
+        int plteIndex;
+        int trnsIndex;
+        int datIndex;
+
+        public FrameImage(Color[] pixels, int ihdrIndex, int plteIndex, int trnsIndex, int datIndex) {
+            this.pixels = pixels;
+            this.ihdrIndex = ihdrIndex;
+            this.plteIndex = plteIndex;
+            this.trnsIndex = trnsIndex;
+            this.datIndex = datIndex;
         }
     }
 }
