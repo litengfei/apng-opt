@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.IllegalFormatFlagsException;
 import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
 import static li.tengfei.apng.base.ApngConst.*;
@@ -93,6 +94,7 @@ public class PaletteOptimizer implements AngOptimizer {
 
             // decompress image pixels
             byte[] img = unzipImageDAT(chunk.getData());
+            compressTest(chunk.getData().length - 12, img);
             frameImages.add(new FrameImage(
                     decodeImagePixels(img, ihdr.getBitDepth(), colorTable),
                     ihdrIndex, plteIndex, trnsIndex, chunkIndex
@@ -122,6 +124,21 @@ public class PaletteOptimizer implements AngOptimizer {
         log.debug(String.format("pixels: %d , colors: %d",
                 pixels.length,
                 allCount));
+    }
+
+    /**
+     * test compress methods
+     */
+    private void compressTest(int origSize, byte[] imgData) {
+        Deflater deflater = new Deflater(0, false);
+        deflater.setInput(imgData);
+        deflater.finish();
+        byte[] out = new byte[imgData.length];
+        int zlib = deflater.deflate(out);
+        log.debug(String.format("len: %d, tiny: %d, zlib: %d",
+                imgData.length,
+                origSize,
+                zlib));
     }
 
     /**
