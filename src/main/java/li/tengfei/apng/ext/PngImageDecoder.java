@@ -5,6 +5,7 @@ import li.tengfei.apng.opt.builder.PngChunkData;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.IllegalFormatFlagsException;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
@@ -110,7 +111,7 @@ public class PngImageDecoder {
                 int count = colorsCount(plte);
                 Color[] colorTable = new Color[count];
                 for (int i = 0; i < count; i++) {
-                    colorTable[0] = readColor(plte, trns, i);
+                    colorTable[i] = readColor(plte, trns, i);
                 }
                 pixels = decodeIndexedPixels(data, ihdr.getBitDepth(), colorTable);
                 break;
@@ -149,14 +150,27 @@ public class PngImageDecoder {
         // Decompress the bytes
         Inflater inflater = new Inflater();
         inflater.setInput(chunkDAT, 8, chunkDAT.length - 12);
+        ArrayList<byte[]> datas = new ArrayList<>();
         byte[] data = new byte[chunkDAT.length];
+        int all = 0;
         int len = inflater.inflate(data);
+        all += len;
+        datas.add(data);
+        while (len == data.length) {
+            data = new byte[data.length];
+            len = inflater.inflate(data);
+            all += len;
+            datas.add(data);
+        }
         inflater.end();
-        byte[] result = new byte[len];
-        System.arraycopy(data, 0, result, 0, len);
+        byte[] result = new byte[all];
+        for (int i = 0; i < datas.size(); i++) {
+            int size = data.length;
+            if (i == datas.size() - 1) size = len;
+            System.arraycopy(datas.get(i), 0, result, i * data.length, size);
+        }
         return result;
     }
-
 
     /**
      * decode color image pixels [ colorType = 0,1, 4,5 ]
@@ -167,7 +181,7 @@ public class PngImageDecoder {
         int sampleCount = 1;
         if (isRGB) sampleCount = 3;
         if (withAlpha) sampleCount++;
-        Color[] pixels = new Color[imageData.length * 8 / bitDepth * sampleCount];
+        Color[] pixels = new Color[imageData.length * 8 / (bitDepth * sampleCount)];
 
         if (!isRGB && !withAlpha & bitDepth < 8) {
             // Greyscale with 1, 2, 4, bitDepth
@@ -176,19 +190,19 @@ public class PngImageDecoder {
                 switch (bitDepth) {
                     case 1:
                         for (int x = 0; x < 8; x++) {
-                            int v = b >> 1 & 0x1;
+                            int v = (b >> x) & 0x1;
                             pixels[i++] = new Color(v, v, v);
                         }
                         continue;
                     case 2:
                         for (int x = 0; x < 4; x++) {
-                            int v = b >> 2 & 0x3;
+                            int v = (b >> (x * 2)) & 0x3;
                             pixels[i++] = new Color(v, v, v);
                         }
                         continue;
                     case 4:
                         for (int x = 0; x < 2; x++) {
-                            int v = b >> 4 & 0xF;
+                            int v = (b >> (x * 4)) & 0xF;
                             pixels[i++] = new Color(v, v, v);
                         }
                         continue;
@@ -224,25 +238,28 @@ public class PngImageDecoder {
      */
     private Color[] decodeIndexedPixels(byte[] imageData, final int bitDepth, Color[] colorTable) {
         Color[] pixels = new Color[imageData.length * 8 / bitDepth];
+        HashSet<Byte> counts = new HashSet<>();
         int i = 0;
         for (byte b : imageData) {
             switch (bitDepth) {
                 case 1:
-                    for (int x = 0; x < 8; x++) pixels[i++] = colorTable[b >> 1 & 0x1];
+                    for (int x = 0; x < 8; x++) pixels[i++] = colorTable[(b >> x) & 0x1];
                     continue;
                 case 2:
-                    for (int x = 0; x < 4; x++) pixels[i++] = colorTable[b >> 2 & 0x3];
+                    for (int x = 0; x < 4; x++) pixels[i++] = colorTable[(b >> (x * 2)) & 0x3];
                     continue;
                 case 4:
-                    for (int x = 0; x < 2; x++) pixels[i++] = colorTable[b >> 4 & 0xF];
+                    for (int x = 0; x < 2; x++) pixels[i++] = colorTable[(b >> (x * 4)) & 0xF];
                     continue;
                 case 8:
+                    counts.add(b);
                     pixels[i++] = colorTable[b & 0xFF];
                     continue;
                 default:
                     throw new IllegalFormatFlagsException("bitDepth=" + bitDepth);
             }
         }
+        System.out.println(counts.size());
         return pixels;
     }
 
@@ -260,8 +277,9 @@ public class PngImageDecoder {
      */
     private Color readColor(byte[] plteChunkData, byte[] trnsChunkData, int index) {
         int alpha = 255;
-        if (trnsChunkData != null && index < trnsChunkData.length)
-            alpha = trnsChunkData[index];
+        // trns may be short than plte
+        if (trnsChunkData != null && index < trnsChunkData.length - 12)
+            alpha = trnsChunkData[8 + index];
         int off = 8 + index * 3;
         return new Color(plteChunkData[off] & 0xFF,
                 plteChunkData[off + 1] & 0xFF,

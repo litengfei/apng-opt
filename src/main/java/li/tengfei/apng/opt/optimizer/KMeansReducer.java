@@ -44,6 +44,15 @@ public class KMeansReducer implements ColorReducer {
             }
         }
 
+        // return if not need reduce
+        if (countMap.size() <= target) {
+            HashMap<Color, Color> mapping = new HashMap<>(countMap.size());
+            for (Color color : countMap.keySet()) {
+                mapping.put(color, color);
+            }
+            return mapping;
+        }
+
         // set colors [ sorted by count ]
         ArrayList<ColorCount> colorCounts = new ArrayList<>(countMap.size());
         Color[] colors = new Color[countMap.size()];
@@ -67,9 +76,9 @@ public class KMeansReducer implements ColorReducer {
             initCenters(colors, counts, indexes, centers);
         } else {
             // use out center init method
-            Map<Color, Color> mapping = initReducer.reduce(pixels, target);
+            Map<Color, Color> initMapping = initReducer.reduce(pixels, target);
             Set<Color> cs = new HashSet<>(target);
-            for (Color c : mapping.values()) cs.add(c);
+            for (Color c : initMapping.values()) cs.add(c);
             int i = 0;
             for (Color c : cs) centers[i++] = c;
             while (i < target) centers[i++] = randomPickColor(colors, counts);

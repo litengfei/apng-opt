@@ -75,7 +75,7 @@ public class PngOptimizer {
             map.values().toArray(colorTable);
             HashMap<Color, Integer> colorIndex = new HashMap<>(colorTable.length);
             for (int i = 0; i < colorTable.length; i++) {
-                colorIndex.put(colorTable[0], i);
+                colorIndex.put(colorTable[i], i);
             }
             byte[] data = new byte[image.getPixels().length];
             int i = 0;

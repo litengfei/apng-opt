@@ -21,7 +21,7 @@ public class MedianCutReducer implements ColorReducer {
     private static int ranking(NColor[] colors) {
         int counts = 0;
         Color center = getMedianColor(colors);
-        for (NColor color : colors) counts += distance(center,center);
+        for (NColor color : colors) counts += distance(center, center);
         return counts;
     }
 
@@ -150,6 +150,15 @@ public class MedianCutReducer implements ColorReducer {
             } else {
                 countMap.put(p, 1);
             }
+        }
+
+        // return if not need reduce
+        if (countMap.size() <= target) {
+            HashMap<Color, Color> mapping = new HashMap<>(countMap.size());
+            for (Color color : countMap.keySet()) {
+                mapping.put(color, color);
+            }
+            return mapping;
         }
 
         NColor[] colors = new NColor[countMap.size()];

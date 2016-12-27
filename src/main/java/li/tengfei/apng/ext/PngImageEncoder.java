@@ -32,7 +32,7 @@ public class PngImageEncoder {
                                          int filterMethod,
                                          int interlaceMethod) {
         byte data[] = new byte[25];
-        intToArray(data.length, data, 0);
+        intToArray(13, data, 0);
         intToArray(CODE_IHDR, data, 4);
         intToArray(oldIHDR.getWidth(), data, 8);
         intToArray(oldIHDR.getHeight(), data, 12);
@@ -65,19 +65,29 @@ public class PngImageEncoder {
             if (maxValue < (b & 0xff)) maxValue = b & 0xff;
         }
 
-        int bitDepth = 1;
-        while ((maxValue = maxValue % 2) > 0) bitDepth++;
+        int bitDepth;
+        if (maxValue < 2) bitDepth = 1;
+        else if (maxValue < 4) bitDepth = 2;
+        else if (maxValue < 16) bitDepth = 4;
+        else if (maxValue < 256) bitDepth = 8;
+        else bitDepth = 16;
+
         chunks.add(makeIHDR(oldIHDR, bitDepth, mdr.filterMethod, oldIHDR.getInterlaceMethod()));
 
 
         // make plte & trns
         int plteSize = colorTable.length * 3 + 12;
         int trnsSize = colorTable.length + 12;
+        // trns may short than plte
+        for (int i = colorTable.length - 1; i >= 0; i--) {
+            if (colorTable[i].getAlpha() != 255) break;
+            trnsSize--;
+        }
         byte[] plte = new byte[plteSize];
         byte[] trns = new byte[trnsSize];
-        intToArray(plteSize - 8, plte, 0);
+        intToArray(plteSize - 12, plte, 0);
         intToArray(CODE_PLTE, plte, 4);
-        intToArray(trnsSize - 8, trns, 0);
+        intToArray(trnsSize - 12, trns, 0);
         intToArray(CODE_tRNS, trns, 4);
 
         // write colors
@@ -118,7 +128,9 @@ public class PngImageEncoder {
         plteChunkData[off++] = (byte) (color.getRed() & 0xFF);
         plteChunkData[off++] = (byte) (color.getGreen() & 0xFF);
         plteChunkData[off] = (byte) (color.getBlue() & 0xFF);
-        trnsChunkData[8 + index] = (byte) (color.getAlpha() & 0xFF);
+        // trns may short than plte
+        if (8 + index < trnsChunkData.length - 4)
+            trnsChunkData[8 + index] = (byte) (color.getAlpha() & 0xFF);
     }
 
     /**
@@ -131,7 +143,7 @@ public class PngImageEncoder {
 
 
         byte[] chunkDat = new byte[len + 12];
-        intToArray(len + 4, chunkDat, 0);
+        intToArray(len, chunkDat, 0);
         intToArray(CODE_IDAT, chunkDat, 4);
         System.arraycopy(buf, 0, chunkDat, 8, len);
         crc32.reset();
