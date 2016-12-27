@@ -16,7 +16,6 @@ class PngOptimizerTest {
         String apngFile = getClass().getResource("/pngs/diamondstar-tiny-182.png").path
         String outFile = WORK_DIR + "/diamondstar-182.png"
         PngOptimizer optimizer = new PngOptimizer()
-        optimizer.optimize(apngFile, outFile);
-
+        optimizer.optimize(apngFile, outFile)
     }
 }

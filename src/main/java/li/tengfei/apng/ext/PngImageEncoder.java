@@ -191,15 +191,14 @@ public class PngImageEncoder {
      * zopfli compress image data
      */
     private int zopfliCompress(byte[] imgData, byte[] outBuf) {
-        Zopfli zopfli = new Zopfli(8 * 1024 * 1024);
-        Options options = new Options(Options.OutputFormat.ZLIB, Options.BlockSplitting.FIRST, 15);
+        Zopfli zopfli = new Zopfli(32768);
+        Options options = new Options(Options.OutputFormat.ZLIB, Options.BlockSplitting.FIRST, 60);
 
         Buffer out = zopfli.compress(options, imgData);
         int size = out.getSize() > outBuf.length ? outBuf.length : out.getSize();
         System.arraycopy(out.getData(), 0, outBuf, 0, size);
         return size;
     }
-
 
     private static class MakeDatChunkResult {
         PngChunkData dataChunk;
