@@ -70,21 +70,45 @@ public class PngOptimizer {
         ArrayList<PngChunkData> newChunks = new ArrayList<>();
 
         for (PngImage image : images) {
+            // compute color table
             Map<Color, Color> map = reducer.reduce(image.getPixels(), 256);
             Color[] colorTable = new Color[map.values().size()];
             map.values().toArray(colorTable);
+
+            // optimize color table: move all opaque colors to end to save trns size
+            int pre = 0, end = colorTable.length - 1;
+            while (pre < end) {
+                if (colorTable[end].getAlpha() == 255) {
+                    end--;
+                    continue;
+                }
+                if (colorTable[pre].getAlpha() != 255) {
+                    pre++;
+                    continue;
+                }
+                Color color = colorTable[end];
+                colorTable[end] = colorTable[pre];
+                colorTable[pre] = color;
+                end--;
+                pre++;
+            }
+
+            // compute color index in color table
             HashMap<Color, Integer> colorIndex = new HashMap<>(colorTable.length);
             for (int i = 0; i < colorTable.length; i++) {
                 colorIndex.put(colorTable[i], i);
             }
+
+            // update pixels color indexes
             byte[] data = new byte[image.getPixels().length];
             int i = 0;
             for (Color color : image.getPixels()) {
                 data[i++] = (byte) (colorIndex.get(map.get(color)) & 0xff);
             }
+
+            // make image chunks
             ApngIHDRChunk ihdr = new ApngIHDRChunk();
             ihdr.parse(new ByteArrayPngChunk(chunks.get(image.getIhdrIndex()).getData()));
-
             newChunks.addAll(encoder.encode(ihdr, data, colorTable));
         }
 

@@ -58,7 +58,6 @@ public class PngImageEncoder {
         // make DAT chunk
         MakeDatChunkResult mdr = makeDATchunk(imgData);
 
-
         // make IHDR
         int maxValue = 0;
         for (byte b : imgData) {
@@ -140,7 +139,7 @@ public class PngImageEncoder {
         MakeDatChunkResult result = new MakeDatChunkResult();
         byte[] buf = new byte[imgData.length];
         int len = zlibCompress(imgData, buf);
-
+        if (len == buf.length) throw new IllegalStateException("It's more big after optimized, stop!");
 
         byte[] chunkDat = new byte[len + 12];
         intToArray(len, chunkDat, 0);
