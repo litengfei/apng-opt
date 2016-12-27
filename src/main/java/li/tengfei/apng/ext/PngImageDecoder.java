@@ -5,7 +5,6 @@ import li.tengfei.apng.opt.builder.PngChunkData;
 
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.IllegalFormatFlagsException;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
@@ -20,6 +19,8 @@ import static li.tengfei.apng.base.ApngConst.*;
  * @since 16/12/26, 下午4:01
  */
 public class PngImageDecoder {
+    public Color[] testCT;
+
     /**
      * decode frameImages from chunks
      */
@@ -83,15 +84,15 @@ public class PngImageDecoder {
         for (int idx = dataBeginIndex; idx <= dataEndIndex; idx++) {
             // decompress image pixels
             byte[] dat = chunks.get(idx).getData();
-            size += dat.length;
+            size += dat.length - 12;
             datas.add(dat);
         }
 
         byte[] data = new byte[size];
         int off = 0;
         for (byte[] dat : datas) {
-            System.arraycopy(dat, 0, data, off, dat.length);
-            off += dat.length;
+            System.arraycopy(dat, 8, data, off, dat.length - 12);
+            off += dat.length - 12;
         }
         datas.clear();
         data = unzipImageDAT(data);
@@ -146,13 +147,13 @@ public class PngImageDecoder {
     /**
      * decompress IDAT/fDAT
      */
-    private byte[] unzipImageDAT(byte[] chunkDAT) throws DataFormatException {
+    private byte[] unzipImageDAT(byte[] compressedData) throws DataFormatException {
         // Decompress the bytes
         Inflater inflater = new Inflater();
-        inflater.setInput(chunkDAT, 8, chunkDAT.length - 12);
+        inflater.setInput(compressedData, 0, compressedData.length);
         ArrayList<byte[]> datas = new ArrayList<>();
-        byte[] data = new byte[chunkDAT.length];
         int all = 0;
+        byte[] data = new byte[compressedData.length];
         int len = inflater.inflate(data);
         all += len;
         datas.add(data);
@@ -238,7 +239,7 @@ public class PngImageDecoder {
      */
     private Color[] decodeIndexedPixels(byte[] imageData, final int bitDepth, Color[] colorTable) {
         Color[] pixels = new Color[imageData.length * 8 / bitDepth];
-        HashSet<Byte> counts = new HashSet<>();
+        testCT = colorTable;
         int i = 0;
         for (byte b : imageData) {
             switch (bitDepth) {
@@ -252,14 +253,12 @@ public class PngImageDecoder {
                     for (int x = 0; x < 2; x++) pixels[i++] = colorTable[(b >> (x * 4)) & 0xF];
                     continue;
                 case 8:
-                    counts.add(b);
                     pixels[i++] = colorTable[b & 0xFF];
                     continue;
                 default:
                     throw new IllegalFormatFlagsException("bitDepth=" + bitDepth);
             }
         }
-        System.out.println(counts.size());
         return pixels;
     }
 

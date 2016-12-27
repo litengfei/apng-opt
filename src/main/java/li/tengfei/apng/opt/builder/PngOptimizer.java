@@ -92,6 +92,7 @@ public class PngOptimizer {
                 end--;
                 pre++;
             }
+            colorTable = decoder.testCT;
 
             // compute color index in color table
             HashMap<Color, Integer> colorIndex = new HashMap<>(colorTable.length);
