@@ -97,7 +97,7 @@ public class Zopfli {
   private void compressZlib(Options options, byte[] input,
       Buffer output) {
     output.append((byte) 0x78);
-    output.append((byte) 0xDA);
+    output.append((byte) 0x01);
 
     Deflate.compress(cookie, options, input, output);
 

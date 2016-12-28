@@ -20,6 +20,8 @@ import static li.tengfei.apng.base.ApngConst.*;
  */
 public class PngImageDecoder {
 
+    public Color[] tmpCB;
+
     /**
      * decode frameImages from chunks
      */
@@ -244,6 +246,7 @@ public class PngImageDecoder {
                                         final int height,
                                         final int bitDepth,
                                         Color[] colorTable) {
+        tmpCB = colorTable;
         Color[] pixels = new Color[(imageData.length - height) * 8 / bitDepth];
         int i = 0, p = -1;
         for (byte b : imageData) {

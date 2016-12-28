@@ -143,8 +143,9 @@ public class PngImageEncoder {
     private MakeDatChunkResult makeDATchunk(byte[] imgData) {
         MakeDatChunkResult result = new MakeDatChunkResult();
         byte[] buf = new byte[imgData.length*2];
-        int len = zlibCompress(imgData, buf);
+        //int len = zlibCompress(imgData, buf);
         //int len = zopfliCompress(imgData, buf);
+        int len = brotliCompress(imgData, buf);
         //if (len >= buf.length) throw new IllegalStateException("It's more big after optimized, stop!");
 
         byte[] chunkDat = new byte[len + 12];
@@ -191,6 +192,19 @@ public class PngImageEncoder {
      * zopfli compress image data
      */
     private int zopfliCompress(byte[] imgData, byte[] outBuf) {
+        Zopfli zopfli = new Zopfli(32768);
+        Options options = new Options(Options.OutputFormat.ZLIB, Options.BlockSplitting.FIRST, 60);
+
+        Buffer out = zopfli.compress(options, imgData);
+        int size = out.getSize() > outBuf.length ? outBuf.length : out.getSize();
+        System.arraycopy(out.getData(), 0, outBuf, 0, size);
+        return size;
+    }
+
+    /**
+     * zopfli compress image data
+     */
+    private int zopfliCompress2(byte[] imgData, byte[] outBuf) {
         Zopfli zopfli = new Zopfli(32768);
         Options options = new Options(Options.OutputFormat.ZLIB, Options.BlockSplitting.FIRST, 60);
 

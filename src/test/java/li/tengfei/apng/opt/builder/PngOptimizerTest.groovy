@@ -18,10 +18,15 @@ class PngOptimizerTest {
         PngOptimizer optimizer = new PngOptimizer()
         optimizer.optimize(apngFile, outFile)
 
+        println 0x7820 % 31
+//        println 0x781e % 31
+//        int x = 0x781e
+//        while(x % 31 != 0) x += 1
+//        println String.format("%H", x)
+//        println 0x78da % 31
+
 //        toFile(optimizer.tmpTinyDAT, WORK_DIR + "/tiny.dat")
 //        toFile(optimizer.tmpLtfDAT, WORK_DIR + "/ltf.dat")
-        //testPng(outFile)
-
     }
 
 
