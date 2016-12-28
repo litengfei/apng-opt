@@ -27,7 +27,6 @@ dependencies {
 
     compile project(':apng-base')
 
-
     // test
     testCompile 'org.testng:testng:6.8'
     testCompile 'org.codehaus.groovy:groovy-testng:2.4.7'
@@ -43,7 +42,10 @@ task exejar(type: Jar, dependsOn: build) {
         zipTree(it)
     }
 
+    def gitRevision = 'git rev-parse --short HEAD'.execute().text.trim() ?: 'deb89'
+
     manifest {
-        attributes 'Main-Class': 'li.tengfei.apng.opt.Runner'
+        attributes (['Main-Class': 'li.tengfei.apng.opt.Runner',
+                'Revision': "$gitRevision"])
     }
 }
