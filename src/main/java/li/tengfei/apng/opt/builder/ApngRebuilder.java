@@ -237,6 +237,9 @@ public class ApngRebuilder {
         ApngACTLChunk actlChunk = new ApngACTLChunk();
         actlChunk.parse(new ByteArrayPngChunk(mActlData));
         intToArray(actlChunk.getNumFrames() - 1, mActlData, 8);
+        CRC32 crc32 = new CRC32();
+        crc32.update(mActlData, 4, mActlData.length - 8);
+        intToArray((int) crc32.getValue(), mActlData, mActlData.length - 4);
     }
 
     /**
