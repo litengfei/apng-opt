@@ -142,10 +142,10 @@ public class PngImageEncoder {
      */
     private MakeDatChunkResult makeDATchunk(byte[] imgData) {
         MakeDatChunkResult result = new MakeDatChunkResult();
-        byte[] buf = new byte[imgData.length];
-        //int len = zlibCompress(imgData, buf);
-        int len = zopfliCompress(imgData, buf);
-        if (len >= buf.length) throw new IllegalStateException("It's more big after optimized, stop!");
+        byte[] buf = new byte[imgData.length*2];
+        int len = zlibCompress(imgData, buf);
+        //int len = zopfliCompress(imgData, buf);
+        //if (len >= buf.length) throw new IllegalStateException("It's more big after optimized, stop!");
 
         byte[] chunkDat = new byte[len + 12];
         intToArray(len, chunkDat, 0);

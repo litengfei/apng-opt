@@ -2,7 +2,7 @@ package li.tengfei.apng.opt.builder
 
 import org.testng.annotations.Test
 
-import static li.tengfei.apng.opt.shrinker.TestConst.getWORK_DIR
+import static li.tengfei.apng.opt.shrinker.TestConst.WORK_DIR
 
 /**
  *
@@ -17,5 +17,17 @@ class PngOptimizerTest {
         String outFile = WORK_DIR + "/diamondstar-182.png"
         PngOptimizer optimizer = new PngOptimizer()
         optimizer.optimize(apngFile, outFile)
+
+//        toFile(optimizer.tmpTinyDAT, WORK_DIR + "/tiny.dat")
+//        toFile(optimizer.tmpLtfDAT, WORK_DIR + "/ltf.dat")
+        //testPng(outFile)
+
+    }
+
+
+    void toFile(byte[] dat, String fn) {
+        FileOutputStream fos = new FileOutputStream(fn)
+        fos.write(dat)
+        fos.flush()
     }
 }
