@@ -16,6 +16,25 @@ public class PngChunkData {
 
     int typeCode;
 
+    /**
+     * fcTL data equals test [exclude seq_num\delay_num\delay_den and crc sections]
+     */
+    public static boolean fctlEquals(byte[] a, byte[] b) {
+        if (a == null || b == null || a.length != 38 || b.length != 38) return false;
+        // skip seq_number and crc
+        for (int i = 12; i < 28; i++) {
+            if (a[i] != b[i]) {
+                return false;
+            }
+        }
+        for (int i = 32; i < 34; i++) {
+            if (a[i] != b[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public byte[] getData() {
         return data;
     }
