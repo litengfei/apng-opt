@@ -2,11 +2,10 @@ package li.tengfei.apng.ext;
 
 import li.tengfei.apng.base.ApngIHDRChunk;
 import li.tengfei.apng.opt.builder.PngChunkData;
+import lu.luz.jzopfli.ZopfliH;
+import lu.luz.jzopfli.Zopfli_lib;
 import org.meteogroup.jbrotli.Brotli;
 import org.meteogroup.jbrotli.BrotliCompressor;
-import ru.eustas.zopfli.Buffer;
-import ru.eustas.zopfli.Options;
-import ru.eustas.zopfli.Zopfli;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -142,10 +141,10 @@ public class PngImageEncoder {
      */
     private MakeDatChunkResult makeDATchunk(byte[] imgData) {
         MakeDatChunkResult result = new MakeDatChunkResult();
-        byte[] buf = new byte[imgData.length*2];
+        byte[] buf = new byte[imgData.length * 2];
         //int len = zlibCompress(imgData, buf);
-        //int len = zopfliCompress(imgData, buf);
-        int len = brotliCompress(imgData, buf);
+        int len = zopfliCompress(imgData, buf);
+        //int len = brotliCompress(imgData, buf);
         //if (len >= buf.length) throw new IllegalStateException("It's more big after optimized, stop!");
 
         byte[] chunkDat = new byte[len + 12];
@@ -192,25 +191,19 @@ public class PngImageEncoder {
      * zopfli compress image data
      */
     private int zopfliCompress(byte[] imgData, byte[] outBuf) {
-        Zopfli zopfli = new Zopfli(32768);
-        Options options = new Options(Options.OutputFormat.ZLIB, Options.BlockSplitting.FIRST, 60);
+        ZopfliH.ZopfliOptions options = new ZopfliH.ZopfliOptions();
+        options.numiterations = 300;
+        byte[][] out = {{0}};
+        int[] outsize = {0};
 
-        Buffer out = zopfli.compress(options, imgData);
-        int size = out.getSize() > outBuf.length ? outBuf.length : out.getSize();
-        System.arraycopy(out.getData(), 0, outBuf, 0, size);
-        return size;
-    }
+        Zopfli_lib.ZopfliCompress(options,
+                ZopfliH.ZopfliFormat.ZOPFLI_FORMAT_ZLIB,
+                imgData, imgData.length,
+                out, outsize);
 
-    /**
-     * zopfli compress image data
-     */
-    private int zopfliCompress2(byte[] imgData, byte[] outBuf) {
-        Zopfli zopfli = new Zopfli(32768);
-        Options options = new Options(Options.OutputFormat.ZLIB, Options.BlockSplitting.FIRST, 60);
+        int size = outsize[0] > outBuf.length ? outBuf.length : outsize[0];
 
-        Buffer out = zopfli.compress(options, imgData);
-        int size = out.getSize() > outBuf.length ? outBuf.length : out.getSize();
-        System.arraycopy(out.getData(), 0, outBuf, 0, size);
+        System.arraycopy(out[0], 0, outBuf, 0, size);
         return size;
     }
 
