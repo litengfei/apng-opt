@@ -96,7 +96,6 @@ public class PngOptimizer {
                 pre++;
             }
 
-            colorTable = decoder.tmpCB;
             // compute color index in color table
             ApngIHDRChunk ihdr = new ApngIHDRChunk();
             ihdr.parse(new ByteArrayPngChunk(chunks.get(image.getIhdrIndex()).getData()));
@@ -148,6 +147,4 @@ public class PngOptimizer {
         os.flush();
         return true;
     }
-
-
 }
