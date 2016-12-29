@@ -7,7 +7,6 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.IllegalFormatFlagsException;
 import java.util.zip.DataFormatException;
-import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
 import static li.tengfei.apng.base.ApngConst.*;
@@ -99,10 +98,12 @@ public class PngImageDecoder {
         Color[] pixels;
         switch (ihdr.getColorType()) {
             case 0:
-                pixels = decodeColorPixels(data, ihdr.getWidth(), ihdr.getBitDepth(), false, false);
+                pixels = decodeColorPixels(data, ihdr.getHeight(),
+                        ihdr.getBitDepth(), false, false);
                 break;
             case 2:
-                pixels = decodeColorPixels(data, ihdr.getWidth(), ihdr.getBitDepth(), true, false);
+                pixels = decodeColorPixels(data, ihdr.getHeight(),
+                        ihdr.getBitDepth(), true, false);
                 break;
             case 3:
                 // get new appeared colors in this frame
@@ -113,35 +114,22 @@ public class PngImageDecoder {
                 for (int i = 0; i < count; i++) {
                     colorTable[i] = readColor(plte, trns, i);
                 }
-                pixels = decodeIndexedPixels(data, ihdr.getWidth(),
-                        ihdr.getHeight(), ihdr.getBitDepth(), colorTable);
+                pixels = decodeIndexedPixels(data, ihdr.getHeight(),
+                        ihdr.getBitDepth(), colorTable);
                 break;
             case 4:
-                pixels = decodeColorPixels(data, ihdr.getWidth(), ihdr.getBitDepth(), false, true);
+                pixels = decodeColorPixels(data, ihdr.getHeight(),
+                        ihdr.getBitDepth(), false, true);
                 break;
             case 6:
-                pixels = decodeColorPixels(data, ihdr.getWidth(), ihdr.getBitDepth(), true, true);
+                pixels = decodeColorPixels(data, ihdr.getHeight(),
+                        ihdr.getBitDepth(), true, true);
                 break;
             default:
                 throw new IllegalFormatFlagsException("colorType=" + ihdr.getColorType());
         }
 
         return new PngImage(pixels, ihdrIndex, plteIndex, trnsIndex, dataBeginIndex, dataEndIndex);
-    }
-
-    /**
-     * test compress methods
-     */
-    private void compressTest(int origSize, byte[] imgData) {
-        Deflater deflater = new Deflater(0, false);
-        deflater.setInput(imgData);
-        deflater.finish();
-        byte[] out = new byte[imgData.length];
-        int zlib = deflater.deflate(out);
-//        log.debug(String.format("len: %d, tiny: %d, zlib: %d",
-//                imgData.length,
-//                origSize,
-//                zlib));
     }
 
     /**
@@ -177,19 +165,21 @@ public class PngImageDecoder {
      * decode color image pixels [ colorType = 0,1, 4,5 ]
      */
     private Color[] decodeColorPixels(byte[] imageData,
-                                      final int width,
+                                      final int height,
                                       final int bitDepth,
                                       boolean isRGB,
                                       boolean withAlpha) {
         int sampleCount = 1;
         if (isRGB) sampleCount = 3;
         if (withAlpha) sampleCount++;
-        Color[] pixels = new Color[imageData.length * 8 / (bitDepth * sampleCount)];
+        Color[] pixels = new Color[(imageData.length - height) * 8 / (bitDepth * sampleCount)];
+        final int rowBytes = imageData.length / height;
 
         if (!isRGB && !withAlpha & bitDepth < 8) {
             // Greyscale with 1, 2, 4, bitDepth
-            int i = 0;
+            int i = 0, dataIndex = 0;
             for (byte b : imageData) {
+                if (dataIndex++ % rowBytes == 0) continue;
                 switch (bitDepth) {
                     case 1:
                         for (int x = 0; x < 8; x++) {
@@ -217,7 +207,12 @@ public class PngImageDecoder {
             // Greyscale or RGB with 8,16 bitDepth
             int step = sampleCount * bitDepth / 8;
             int i = 0;
-            for (int p = 0; p < imageData.length; p += step) {
+            for (int p = 0; p < imageData.length; ) {
+                if (p % rowBytes == 0) {
+                    if (imageData[p] != 0) System.out.println(imageData[p]);
+                    p++;
+                    continue;
+                }
                 int R, G, B, A;
                 int off = p;
                 R = imageData[off++];
@@ -231,6 +226,7 @@ public class PngImageDecoder {
                 if (withAlpha) A = imageData[off];
                 else A = 255;
                 pixels[i++] = new Color(R & 0xFF, G & 0xFF, B & 0xFF, A & 0xFF);
+                p += step;
             }
         }
         return pixels;
@@ -240,15 +236,14 @@ public class PngImageDecoder {
      * decode indexed image pixels [ colorType = 3,5 ]
      */
     private Color[] decodeIndexedPixels(byte[] imageData,
-                                        final int width,
                                         final int height,
                                         final int bitDepth,
                                         Color[] colorTable) {
         Color[] pixels = new Color[(imageData.length - height) * 8 / bitDepth];
-        int i = 0, p = -1;
+        int i = 0, dataIndex = 0;
+        final int rowBytes = imageData.length / height;
         for (byte b : imageData) {
-            p++;
-            if (p % (width + 1) == 0) continue;
+            if (dataIndex++ % rowBytes == 0) continue;
             switch (bitDepth) {
                 case 1:
                     for (int x = 0; x < 8; x++) pixels[i++] = colorTable[(b >> x) & 0x1];
@@ -266,7 +261,6 @@ public class PngImageDecoder {
                     throw new IllegalFormatFlagsException("bitDepth=" + bitDepth);
             }
         }
-        for (int j = 0; j < pixels.length; j++) if (pixels[j] == null) System.out.println(j);
         return pixels;
     }
 
