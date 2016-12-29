@@ -1,13 +1,9 @@
 package li.tengfei.apng.opt.builder;
 
-import li.tengfei.apng.base.ApngFCTLChunk;
-import li.tengfei.apng.base.ApngIHDRChunk;
-import li.tengfei.apng.base.FormatNotSupportException;
-import li.tengfei.apng.base.PngStream;
+import li.tengfei.apng.base.*;
 import li.tengfei.apng.ext.ByteArrayPngChunk;
 import li.tengfei.apng.opt.optimizer.ChunkTypeHelper;
 import li.tengfei.apng.opt.optimizer.PaletteOptimizer;
-import li.tengfei.apng.opt.optimizer.PatchOptimizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,8 +12,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.zip.CRC32;
 
 import static li.tengfei.apng.base.ApngConst.*;
+import static li.tengfei.apng.base.PngStream.intToArray;
 
 /**
  * Apng Rebuilder
@@ -36,6 +35,25 @@ public class ApngRebuilder {
     private ArrayList<PngChunkData> mFctlChunks = new ArrayList<>();
 
     private PngChunkData mActlChunk;
+
+    /**
+     * fcTL data equals test [exclude seq_num\delay_num\delay_den and crc sections]
+     */
+    public static boolean fctlEquals(byte[] a, byte[] b) {
+        if (a == null || b == null || a.length != 38 || b.length != 38) return false;
+        // skip seq_number and crc
+        for (int i = 12; i < 28; i++) {
+            if (a[i] != b[i]) {
+                return false;
+            }
+        }
+        for (int i = 32; i < 34; i++) {
+            if (a[i] != b[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     public PngData getApngData() {
         return mApngData;
@@ -135,7 +153,6 @@ public class ApngRebuilder {
         return ang;
     }
 
-
     /**
      * process reuse optimize,
      * remove same chunks if the previous frame contains
@@ -166,7 +183,6 @@ public class ApngRebuilder {
                     }
                 }
             }
-
         }
     }
 
@@ -176,16 +192,28 @@ public class ApngRebuilder {
      */
     private void processInherit() {
         //Arrays.equals()
+        HashSet<PngChunkData> removeDatChunks = new HashSet<>();
         for (int i = mFrameDatas.size() - 1; i > 0; i--) {
             PngData cur = mFrameDatas.get(i);
             PngData pre = mFrameDatas.get(i - 1);
+
+            // no removed dat chunks first
+            removeDatChunks.clear();
 
             for (int j = cur.chunks.size() - 1; j >= 0; j--) {
                 PngChunkData curChunk = cur.chunks.get(j);
                 boolean isInherited = false;
                 for (PngChunkData preChunk : pre.chunks) {
                     if (curChunk.equals(preChunk)) {
-                        isInherited = true;
+                        if (curChunk.typeCode == CODE_IDAT) {
+                            // record current dat chunk could be removed,
+                            // but don't remove it now
+                            // [only can be remove when all DATs can be removed,
+                            // and there are no other chunks in current frame]
+                            removeDatChunks.add(curChunk);
+                        } else {
+                            isInherited = true;
+                        }
                         break;
                     }
                 }
@@ -197,7 +225,74 @@ public class ApngRebuilder {
 //                    ));
                 }
             }
+
+            // all DATs must be removed together if :
+            // 1. all DATs can be removed;
+            // 2. there are no other chunks in current frame;
+            // 3. fcTL is equals to previous one [exclude seq_num\delay_num\delay_den section]
+            boolean datCanBeRemoved = fctlEquals(mFctlChunks.get(i).data, mFctlChunks.get(i - 1).data);
+            if (datCanBeRemoved) {
+                for (PngChunkData chunk : cur.chunks) {
+                    if (!removeDatChunks.contains(chunk)) {
+                        datCanBeRemoved = false;
+                        break;
+                    }
+                }
+            }
+
+            if (datCanBeRemoved) {
+                // remove current frame, and add current frame's time to previous frame
+                decActlFramesCount();       // decrease actl's frames_count
+                mFrameDatas.remove(i);      // remove current frame
+                incFctlDelay(mFctlChunks.get(i).data, mFctlChunks.get(i - 1).data); // inc cur frames delay to previous one
+                mFctlChunks.remove(i);       // remove current fctl
+                System.out.println(i);
+            }
         }
+    }
+
+    /**
+     * decrease Frames Count In Actl
+     */
+    private void decActlFramesCount() {
+        ApngACTLChunk actlChunk = new ApngACTLChunk();
+        actlChunk.parse(new ByteArrayPngChunk(mActlChunk.data));
+        intToArray(actlChunk.getNumFrames() - 1, mActlChunk.data, 8);
+        CRC32 crc32 = new CRC32();
+        crc32.update(mActlChunk.data, 4, mActlChunk.data.length - 8);
+        intToArray((int) crc32.getValue(), mActlChunk.data, mActlChunk.data.length - 4);
+    }
+
+    /**
+     * merge current fctl's delay to previous one
+     *
+     * @param curFctlData the one would be deleted
+     * @param preFctlData the previous one add current one's delay
+     */
+    private void incFctlDelay(byte[] curFctlData, byte[] preFctlData) {
+        ApngFCTLChunk pre = new ApngFCTLChunk();
+        pre.parse(new ByteArrayPngChunk(preFctlData));
+        ApngFCTLChunk cur = new ApngFCTLChunk();
+        cur.parse(new ByteArrayPngChunk(curFctlData));
+
+        int num = pre.getDelayNum();
+        int den = pre.getDelayDen();
+        if (den == cur.getDelayDen()) {
+            num += cur.getDelayNum();
+        } else {
+            num = num * cur.getDelayDen() + den * cur.getDelayNum();
+            den = den * cur.getDelayDen();
+            while (num % 2 == 0 && den % 2 == 0) {
+                num /= 2;
+                den /= 2;
+            }
+        }
+
+        int num_den = ((num & 0xFFFF) << 16) | (den & 0xFFFF);
+        intToArray(num_den, preFctlData, 28);
+        CRC32 crc32 = new CRC32();
+        crc32.update(preFctlData, 4, preFctlData.length - 8);
+        intToArray((int) crc32.getValue(), preFctlData, preFctlData.length - 4);
     }
 
     /**
