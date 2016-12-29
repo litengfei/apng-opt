@@ -33,7 +33,6 @@ public class PngImageEncoder {
      */
     private static PngChunkData makeIHDR(ApngIHDRChunk oldIHDR,
                                          int bitDepth,
-                                         int filterMethod,
                                          int interlaceMethod) {
         byte data[] = new byte[25];
         intToArray(13, data, 0);
@@ -43,7 +42,7 @@ public class PngImageEncoder {
         data[16] = (byte) (bitDepth & 0xff);        // bitDepth;
         data[17] = 3;                               // colorType;
         data[18] = 0;                               // compressMethod;
-        data[19] = (byte) (filterMethod & 0xff);    // filterMethod;
+        data[19] = 0;                               // filterMethod;
         data[20] = (byte) (interlaceMethod & 0xff); // interlaceMethod;
         CRC32 crc32 = new CRC32();
         crc32.update(data, 4, 17);
@@ -58,10 +57,6 @@ public class PngImageEncoder {
                                           byte[] imgData,
                                           Color[] colorTable) {
         ArrayList<PngChunkData> chunks = new ArrayList<>();
-
-        // make DAT chunk
-        MakeDatChunkResult mdr = makeDATchunk(imgData);
-
         // make IHDR
         int maxValue = 0;
         for (byte b : imgData) {
@@ -75,8 +70,7 @@ public class PngImageEncoder {
         else if (maxValue < 256) bitDepth = 8;
         else bitDepth = 16;
 
-        chunks.add(makeIHDR(oldIHDR, bitDepth, mdr.filterMethod, oldIHDR.getInterlaceMethod()));
-
+        chunks.add(makeIHDR(oldIHDR, bitDepth, oldIHDR.getInterlaceMethod()));
 
         // make plte & trns
         int plteSize = colorTable.length * 3 + 12;
@@ -117,8 +111,7 @@ public class PngImageEncoder {
         if (withAlpha) chunks.add(new PngChunkData(trns, CODE_tRNS));
 
         // add dat chunk at last
-        chunks.add(mdr.dataChunk);
-
+        chunks.add(makeDATchunk(imgData));
         return chunks;
     }
 
@@ -139,13 +132,11 @@ public class PngImageEncoder {
     /**
      * make DAT chunk with image data
      */
-    private MakeDatChunkResult makeDATchunk(byte[] imgData) {
-        MakeDatChunkResult result = new MakeDatChunkResult();
+    private PngChunkData makeDATchunk(byte[] imgData) {
         byte[] buf = new byte[imgData.length * 2];
         //int len = zlibCompress(imgData, buf);
         int len = zopfliCompress(imgData, buf);
-        //int len = brotliCompress(imgData, buf);
-        //if (len >= buf.length) throw new IllegalStateException("It's more big after optimized, stop!");
+        if (len >= buf.length) throw new IllegalStateException("It's more big after optimized, stop!");
 
         byte[] chunkDat = new byte[len + 12];
         intToArray(len, chunkDat, 0);
@@ -154,9 +145,7 @@ public class PngImageEncoder {
         crc32.reset();
         crc32.update(chunkDat, 4, len + 4);
         intToArray((int) crc32.getValue(), chunkDat, len + 8);
-        result.dataChunk = new PngChunkData(chunkDat, CODE_IDAT);
-        result.filterMethod = 0;
-        return result;
+        return new PngChunkData(chunkDat, CODE_IDAT);
     }
 
     /**
@@ -172,27 +161,11 @@ public class PngImageEncoder {
     }
 
     /**
-     * brotli compress image data
-     */
-    private int brotliCompress(byte[] imgData, byte[] outBuf) {
-        BrotliCompressor compressor = new BrotliCompressor();
-        Brotli.Parameter parameter = new Brotli.Parameter();
-        //parameter.set
-        //compressor.compress()
-        //deflater.setInput(imgData);
-        //deflater.finish();
-        //int zlib = deflater.deflate(outBuf);
-        //deflater.end();
-        //return zlib;
-        return 0;
-    }
-
-    /**
      * zopfli compress image data
      */
     private int zopfliCompress(byte[] imgData, byte[] outBuf) {
         ZopfliH.ZopfliOptions options = new ZopfliH.ZopfliOptions();
-        options.numiterations = 300;
+        options.numiterations = 15;
         byte[][] out = {{0}};
         int[] outsize = {0};
 
@@ -205,10 +178,5 @@ public class PngImageEncoder {
 
         System.arraycopy(out[0], 0, outBuf, 0, size);
         return size;
-    }
-
-    private static class MakeDatChunkResult {
-        PngChunkData dataChunk;
-        int filterMethod;
     }
 }

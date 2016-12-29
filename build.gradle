@@ -24,7 +24,6 @@ dependencies {
 
     // tinify
     compile 'com.tinify:tinify:1.3.1'
-    compile 'org.meteogroup.jbrotli:jbrotli:0.5.0'
 
     compile group: 'com.github.luccappellaro', name: 'jzopfli', version: '0.0.4'
 
