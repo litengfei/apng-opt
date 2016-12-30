@@ -4,8 +4,6 @@ import li.tengfei.apng.base.ApngIHDRChunk;
 import li.tengfei.apng.opt.builder.PngChunkData;
 import lu.luz.jzopfli.ZopfliH;
 import lu.luz.jzopfli.Zopfli_lib;
-import org.meteogroup.jbrotli.Brotli;
-import org.meteogroup.jbrotli.BrotliCompressor;
 
 import java.awt.*;
 import java.util.ArrayList;

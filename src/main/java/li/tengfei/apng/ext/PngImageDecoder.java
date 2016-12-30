@@ -76,6 +76,8 @@ public class PngImageDecoder {
             throw new IllegalFormatFlagsException("InterlaceMethod=" + ihdr.getInterlaceMethod());
         if (ihdr.getCompressMethod() != 0)
             throw new IllegalFormatFlagsException("CompressMethod=" + ihdr.getCompressMethod());
+        if (ihdr.getBitDepth() > 8)
+            throw new IllegalFormatFlagsException("Unsupported BitDepth=" + ihdr.getCompressMethod());
 
         ArrayList<byte[]> datas = new ArrayList<>();
         int size = 0;
@@ -162,6 +164,25 @@ public class PngImageDecoder {
     }
 
     /**
+     * reconstruct image data
+     *
+     * @param filteredData filtered data
+     * @param height       image height
+     * @param pixelBytes   bytes count in one pixel (>=1)
+     * @return
+     */
+    private byte[] reconstructImageDAT(byte[] filteredData, final int height, int pixelBytes) {
+        final int rowBytes = filteredData.length / height;
+        byte[] reconstructedData = new byte[filteredData.length];
+        for (int i = 0; i < height; i++) {
+            PngFilters.recon(filteredData, reconstructedData,
+                    i * rowBytes, rowBytes, pixelBytes);
+        }
+
+        return reconstructedData;
+    }
+
+    /**
      * decode color image pixels [ colorType = 0,1, 4,5 ]
      */
     private Color[] decodeColorPixels(byte[] imageData,
@@ -175,6 +196,7 @@ public class PngImageDecoder {
         Color[] pixels = new Color[(imageData.length - height) * 8 / (bitDepth * sampleCount)];
         final int rowBytes = imageData.length / height;
 
+        imageData = reconstructImageDAT(imageData, height, sampleCount);
         if (!isRGB && !withAlpha & bitDepth < 8) {
             // Greyscale with 1, 2, 4, bitDepth
             int i = 0, dataIndex = 0;
@@ -204,7 +226,7 @@ public class PngImageDecoder {
                 }
             }
         } else {
-            // Greyscale or RGB with 8,16 bitDepth
+            // Greyscale or RGB with 8 bitDepth  ( bitDepth 16 not supported now )
             int step = sampleCount * bitDepth / 8;
             int i = 0;
             for (int p = 0; p < imageData.length; ) {
@@ -242,6 +264,7 @@ public class PngImageDecoder {
         Color[] pixels = new Color[(imageData.length - height) * 8 / bitDepth];
         int i = 0, dataIndex = 0;
         final int rowBytes = imageData.length / height;
+        imageData = reconstructImageDAT(imageData, height, 1);
         for (byte b : imageData) {
             if (dataIndex++ % rowBytes == 0) continue;
             switch (bitDepth) {
