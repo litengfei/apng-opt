@@ -6,7 +6,7 @@ import lu.luz.jzopfli.ZopfliH;
 import lu.luz.jzopfli.Zopfli_lib;
 
 import java.awt.*;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 
@@ -51,22 +51,97 @@ public class PngImageEncoder {
     /**
      * encode image into indexed ColorType chunks: IDHR + PLTE [ + TRNS ] IDAT
      */
-    public ArrayList<PngChunkData> encode(ApngIHDRChunk oldIHDR,
-                                          byte[] imgData,
-                                          Color[] colorTable) {
-        ArrayList<PngChunkData> chunks = new ArrayList<>();
-        // make IHDR
-        int maxValue = 0;
-        for (byte b : imgData) {
-            if (maxValue < (b & 0xff)) maxValue = b & 0xff;
+    public ArrayList<PngChunkData> encode(Color[] pixels, Map<Color, Color> map, byte[] ihdrData) {
+        HashSet<Color> set = new HashSet<>(256);
+        set.addAll(map.values());
+        if (set.size() > 256)
+            throw new IllegalFormatFlagsException("indexed png not supported BitDepth=" + set.size());
+        Color[] colorTable = new Color[set.size()];
+        set.toArray(colorTable);
+
+        // optimize color table: move all opaque colors to end to save trns size
+        int pre = 0, end = colorTable.length - 1;
+        while (pre < end) {
+            if (colorTable[end].getAlpha() == 255) {
+                end--;
+                continue;
+            }
+            if (colorTable[pre].getAlpha() != 255) {
+                pre++;
+                continue;
+            }
+            Color color = colorTable[end];
+            colorTable[end] = colorTable[pre];
+            colorTable[pre] = color;
+            end--;
+            pre++;
         }
 
+        // compute color index in color table
+        ApngIHDRChunk ihdr = new ApngIHDRChunk();
+        ihdr.parse(new ByteArrayPngChunk(ihdrData));
+
+        // compute color index in color table
+        HashMap<Color, Integer> colorIndex = new HashMap<>(colorTable.length);
+        for (int i = 0; i < colorTable.length; i++) {
+            colorIndex.put(colorTable[i], i);
+        }
+
+        // calculate bitDepth
+        int maxValue = colorTable.length - 1;
         int bitDepth;
         if (maxValue < 2) bitDepth = 1;
         else if (maxValue < 4) bitDepth = 2;
         else if (maxValue < 16) bitDepth = 4;
-        else if (maxValue < 256) bitDepth = 8;
-        else bitDepth = 16;
+        else bitDepth = 8;
+
+        // generate indexed image data
+        byte[] data = new byte[pixels.length * bitDepth / 8 + ihdr.getHeight()];
+        final int rowBytes = data.length / ihdr.getHeight();
+
+        int p = 0;
+        for (int i = 0; i < data.length; i++) {
+            if (i % rowBytes == 0) {
+                data[i] = 0;
+                continue;
+            }
+            byte dataByte = 0;
+            switch (bitDepth) {
+                case 1:
+                    for (int x = 0; x < 8; x++) {
+                        dataByte = (byte) ((dataByte << 1) | (colorIndex.get(map.get(pixels[p++])) & 0x1));
+                    }
+                    break;
+                case 2:
+                    for (int x = 0; x < 4; x++) {
+                        dataByte = (byte) ((dataByte << 2) | (colorIndex.get(map.get(pixels[p++])) & 0x3));
+                    }
+                    break;
+                case 4:
+                    for (int x = 0; x < 2; x++) {
+                        dataByte = (byte) ((dataByte << 4) | (colorIndex.get(map.get(pixels[p++])) & 0xf));
+                    }
+                    break;
+                case 8:
+                    dataByte = (byte) (colorIndex.get(map.get(pixels[p++])) & 0xff);
+            }
+
+            data[i] = dataByte;
+        }
+        return encode(ihdr, data, colorTable, bitDepth);
+    }
+
+
+    /**
+     * encode image into indexed ColorType chunks: IDHR + PLTE [ + TRNS ] IDAT
+     */
+    private ArrayList<PngChunkData> encode(ApngIHDRChunk oldIHDR,
+                                           byte[] imgData,
+                                           Color[] colorTable,
+                                           int bitDepth) {
+        ArrayList<PngChunkData> chunks = new ArrayList<>();
+        // make IHDR
+
 
         chunks.add(makeIHDR(oldIHDR, bitDepth, oldIHDR.getInterlaceMethod()));
 
