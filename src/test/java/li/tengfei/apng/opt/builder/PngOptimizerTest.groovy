@@ -26,16 +26,16 @@ class PngOptimizerTest {
     @Test
     void testOptimize_suites() {
 
-        opt_suite("f00n0g08.png")
-        opt_suite("f00n2c08.png")
-        opt_suite("f01n0g08.png")
-        opt_suite("f01n2c08.png")
-        opt_suite("f02n0g08.png")
-        opt_suite("f02n2c08.png")
-        opt_suite("f03n0g08.png")
-        opt_suite("f03n2c08.png")
-        opt_suite("f04n0g08.png")
-        opt_suite("f04n2c08.png")
+//        opt_suite("f00n0g08.png")
+//        opt_suite("f00n2c08.png")
+//        opt_suite("f01n0g08.png")
+//        opt_suite("f01n2c08.png")
+//        opt_suite("f02n0g08.png")
+//        opt_suite("f02n2c08.png")
+//        opt_suite("f03n0g08.png")
+//        opt_suite("f03n2c08.png")
+//        opt_suite("f04n0g08.png")
+//        opt_suite("f04n2c08.png")
         opt_suite("f99n0g04.png")
 
 

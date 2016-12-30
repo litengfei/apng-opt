@@ -205,19 +205,19 @@ public class PngImageDecoder {
                 switch (bitDepth) {
                     case 1:
                         for (int x = 0; x < 8; x++) {
-                            int v = (b >> x) & 0x1;
+                            int v = ((b >> (7 - x)) & 0x1) * 255;
                             pixels[i++] = new Color(v, v, v);
                         }
                         continue;
                     case 2:
                         for (int x = 0; x < 4; x++) {
-                            int v = (b >> (x * 2)) & 0x3;
+                            int v = ((b >> ((3 - x) * 2)) & 0x3) * 85;
                             pixels[i++] = new Color(v, v, v);
                         }
                         continue;
                     case 4:
                         for (int x = 0; x < 2; x++) {
-                            int v = (b >> (x * 4)) & 0xF;
+                            int v = (((b >> ((1 - x) * 4)) & 0xF) * 17);
                             pixels[i++] = new Color(v, v, v);
                         }
                         continue;
@@ -269,13 +269,13 @@ public class PngImageDecoder {
             if (dataIndex++ % rowBytes == 0) continue;
             switch (bitDepth) {
                 case 1:
-                    for (int x = 0; x < 8; x++) pixels[i++] = colorTable[(b >> x) & 0x1];
+                    for (int x = 0; x < 8; x++) pixels[i++] = colorTable[(b >> (7 - x)) & 0x1];
                     continue;
                 case 2:
-                    for (int x = 0; x < 4; x++) pixels[i++] = colorTable[(b >> (x * 2)) & 0x3];
+                    for (int x = 0; x < 4; x++) pixels[i++] = colorTable[(b >> ((3 - x) * 2)) & 0x3];
                     continue;
                 case 4:
-                    for (int x = 0; x < 2; x++) pixels[i++] = colorTable[(b >> (x * 4)) & 0xF];
+                    for (int x = 0; x < 2; x++) pixels[i++] = colorTable[(b >> ((1 - x) * 4)) & 0xF];
                     continue;
                 case 8:
                     pixels[i++] = colorTable[b & 0xFF];
