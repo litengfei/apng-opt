@@ -207,6 +207,7 @@ public class KMeansReducer implements ColorReducer {
         // generate sub colors/counts/centers/indexes for split
         int count = 0;
         for (int idx : indexes) if (idx == maxIdx) count++;
+        if (count < 2) return false; // appears when only one color counts all as a center
         Color[] subColors = new Color[count];
         int[] subCounts = new int[count];
         int[] subIndexes = new int[count];
