@@ -1,7 +1,6 @@
 package li.tengfei.apng.opt.optimizer;
 
 import java.awt.*;
-import java.util.Map;
 
 /**
  * Color Reducer
@@ -13,11 +12,12 @@ public interface ColorReducer {
     /**
      * reduce colors
      *
-     * @param pixels all pixels' color
-     * @param target target color max count, -1 means auto detect
-     * @return color reduce mapping
+     * @param pixels     all pixels' color
+     * @param target     target color max count, -1 means auto detect
+     * @param imageWidth image width
+     * @return [0][] color reduced pixels, [1][] color table
      */
-    Map<Color, Color> reduce(Color[] pixels, int target);
+    Color[][] reduce(Color[] pixels, int target, int imageWidth);
 }
 
 
