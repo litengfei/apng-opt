@@ -15,17 +15,17 @@ public class BaseColorMapper implements ColorMapper {
     /**
      * generate indexed image
      *
-     * @param pixels       original image pixels in Color
-     * @param height       image height
-     * @param colorMap     colorMap
-     * @param colorIndex   color index of color table
-     * @param pixelIndexes output indexed image, pixelIndexes.length = pixels.length
+     * @param pixels     original image pixels in Color
+     * @param height     image height
+     * @param colorMap   colorMap
+     * @param colorIndex color index of color table
+     * @param mapping    output indexed image mapping, pixelIndexes.length = pixels.length
      */
     protected void genIndexedImage(Color[] pixels, int height,
                                    Map<Color, Color> colorMap, HashMap<Color, Integer> colorIndex,
-                                   byte[] pixelIndexes) {
+                                   Mapping mapping) {
         for (int i = 0; i < pixels.length; i++)
-            pixelIndexes[i] = (byte) (colorIndex.get(colorMap.get(pixels[i])) & 0xff);
+            mapping.pixelIndexes[i] = (byte) (colorIndex.get(colorMap.get(pixels[i])) & 0xff);
     }
 
     /**
@@ -73,7 +73,7 @@ public class BaseColorMapper implements ColorMapper {
 
         genIndexedImage(pixels, height,
                 colorMap, colorIndex,
-                mapping.pixelIndexes);
+                mapping);
 
         return mapping;
     }

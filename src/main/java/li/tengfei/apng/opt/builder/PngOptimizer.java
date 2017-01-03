@@ -6,11 +6,8 @@ import li.tengfei.apng.ext.ByteArrayPngChunk;
 import li.tengfei.apng.ext.PngImage;
 import li.tengfei.apng.ext.PngImageDecoder;
 import li.tengfei.apng.ext.PngImageEncoder;
-import li.tengfei.apng.opt.optimizer.BaseColorMapper;
-import li.tengfei.apng.opt.optimizer.ColorMapper;
+import li.tengfei.apng.opt.optimizer.*;
 import li.tengfei.apng.opt.optimizer.ColorMapper.Mapping;
-import li.tengfei.apng.opt.optimizer.KMeansReducer;
-import li.tengfei.apng.opt.optimizer.MedianCutReducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +32,7 @@ public class PngOptimizer {
     private static final Logger log = LoggerFactory.getLogger(PngOptimizer.class);
     private PngImageDecoder decoder = new PngImageDecoder();
     private PngImageEncoder encoder = new PngImageEncoder();
-    private ColorMapper mapper = new BaseColorMapper();
+    private ColorMapper mapper = new ColorSimuMapper();
     private PngData mPng;
 
     private ArrayList<PngData> mFrameDatas;
