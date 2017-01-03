@@ -23,7 +23,9 @@ public class ColorSimuMapper extends BaseColorMapper {
         int width = pixels.length / height;
 
         byte[] centers = new byte[4 * R * R];
-        byte[] indexes = new byte[mapping.pixelIndexes.length];
+        int[] dists = new int[4 * R * R];
+        byte[] indexes = mapping.pixelIndexes;
+        mapping.pixelIndexes = new byte[mapping.pixelIndexes.length];
         //Color[] centers = new Color[R * R];
 
         for (int y = 0; y < height; y++) {
@@ -35,23 +37,47 @@ public class ColorSimuMapper extends BaseColorMapper {
                 int xl = 0 < x - R ? x - R : 0;
                 int xh = width - 1 < x + R ? width - 1 : x + R;
 
+                int count = 0, distSum = 0;
+                for (int yy = yl; yy < yh; yy++) {
+                    for (int xx = xl; xx < xh; xx++) {
+                        // calculate circle range
+                        if ((xx - x) * (xx - x) + (yy - y) * (yy - y) > R * R) continue;
+                        int pb = yy * width + xx;
+                        Color B = pixels[pb];
+                        distSum += ColorUtils.distance(A, B);
+                        count++;
+                    }
+                }
+
+                int distAvg = distSum / count + 1;
                 int i = 0;
                 for (int yy = yl; yy < yh; yy++) {
                     for (int xx = xl; xx < xh; xx++) {
                         // calculate circle range
                         if ((xx - x) * (xx - x) + (yy - y) * (yy - y) > R * R) continue;
                         int pb = yy * width + xx;
-                        Color B = mapping.colorTable[mapping.pixelIndexes[pb] & 0xff];
-                        if (ColorUtils.distance(A, B) > MAX_DIST) continue;
-                        centers[i++] = mapping.pixelIndexes[pb];
+                        Color B = pixels[pb];
+                        int dist = ColorUtils.distance(A, B);
+                        if (dist > distAvg || dist > MAX_DIST) continue;
+                        centers[i] = indexes[pb];
+                        dists[i++] = (R * R) / ((xx - x) * (xx - x) + (yy - y) * (yy - y) + 1);
                     }
                 }
-                if (i > 0)
-                    indexes[pa] = centers[rand.nextInt(i)];
-                else
-                    indexes[pa] = mapping.pixelIndexes[pa];
+
+                if (i > 0) {
+                    int disAll = 0;
+                    for (int dis : dists) disAll += dis;
+                    int idx = rand.nextInt(i);
+                    disAll -= dists[i];
+                    while (disAll > 0) {
+                        idx = rand.nextInt(i);
+                        disAll -= dists[idx];
+                    }
+                    mapping.pixelIndexes[pa] = centers[idx];
+                } else {
+                    mapping.pixelIndexes[pa] = indexes[pa];
+                }
             }
         }
-        mapping.pixelIndexes = indexes;
     }
 }
