@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import static li.tengfei.apng.opt.optimizer.ColorUtils.distance;
+
 /**
  * MedianCut color Reducer
  *
@@ -87,21 +89,6 @@ public class MedianCutReducer implements ColorReducer {
         return true;
     }
 
-    /**
-     * color distance
-     */
-    public static int distance(Color a, Color b) {
-        int dist = 0;
-        int delta = a.getRed() - b.getRed();
-        dist += delta * delta;
-        delta = a.getGreen() - b.getGreen();
-        dist += delta * delta;
-        delta = a.getBlue() - b.getBlue();
-        dist += delta * delta;
-        delta = a.getAlpha() - b.getAlpha();
-        dist += delta * delta;
-        return dist;
-    }
 
     /**
      * get MedianColor of the colors

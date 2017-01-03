@@ -6,6 +6,8 @@ import org.slf4j.LoggerFactory;
 import java.awt.*;
 import java.util.*;
 
+import static li.tengfei.apng.opt.optimizer.ColorUtils.distance;
+
 
 /**
  * K-Means Color Reducer
@@ -325,19 +327,6 @@ public class KMeansReducer implements ColorReducer {
             }
         }
         return changed;
-    }
-
-    public int distance(Color a, Color b) {
-        int dist = 0;
-        int delta = a.getRed() - b.getRed();
-        dist += delta * delta;
-        delta = a.getGreen() - b.getGreen();
-        dist += delta * delta;
-        delta = a.getBlue() - b.getBlue();
-        dist += delta * delta;
-        delta = a.getAlpha() - b.getAlpha();
-        dist += delta * delta;
-        return dist;
     }
 
     private static class IndexCount implements Comparable<IndexCount> {
