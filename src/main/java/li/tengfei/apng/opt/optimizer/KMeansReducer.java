@@ -32,7 +32,7 @@ public class KMeansReducer implements ColorReducer {
      * reduce color use k-means++ algorithm
      */
     @Override
-    public Color[][] reduce(Color[] pixels, int target, int imageWidth){
+    public Map<Color, Color> reduce(Color[] pixels, int target) {
         // count color appearance
         mPixels = pixels.length;
         HashMap<Color, Integer> countMap = new HashMap<Color, Integer>();

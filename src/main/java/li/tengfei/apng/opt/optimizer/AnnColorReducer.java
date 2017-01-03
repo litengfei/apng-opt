@@ -11,7 +11,7 @@ import java.util.Map;
  */
 public class AnnColorReducer implements ColorReducer {
     @Override
-    public Color[][] reduce(Color[] pixels, int target, int imageWidth){
+    public Map<Color, Color> reduce(Color[] pixels, int target) {
         return null;
     }
 

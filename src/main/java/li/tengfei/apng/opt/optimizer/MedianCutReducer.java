@@ -142,7 +142,7 @@ public class MedianCutReducer implements ColorReducer {
     }
 
     @Override
-    public Color[][] reduce(Color[] pixels, int target, int imageWidth) {
+    public Map<Color, Color> reduce(Color[] pixels, int target) {
         HashMap<Color, Integer> countMap = new HashMap<Color, Integer>();
         for (Color p : pixels) {
             if (countMap.containsKey(p)) {
