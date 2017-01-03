@@ -1,9 +1,14 @@
 package li.tengfei.apng.opt.builder;
 
+import li.tengfei.apng.base.ApngIHDRChunk;
 import li.tengfei.apng.base.FormatNotSupportException;
+import li.tengfei.apng.ext.ByteArrayPngChunk;
 import li.tengfei.apng.ext.PngImage;
 import li.tengfei.apng.ext.PngImageDecoder;
 import li.tengfei.apng.ext.PngImageEncoder;
+import li.tengfei.apng.opt.optimizer.BaseColorMapper;
+import li.tengfei.apng.opt.optimizer.ColorMapper;
+import li.tengfei.apng.opt.optimizer.ColorMapper.Mapping;
 import li.tengfei.apng.opt.optimizer.KMeansReducer;
 import li.tengfei.apng.opt.optimizer.MedianCutReducer;
 import org.slf4j.Logger;
@@ -30,6 +35,7 @@ public class PngOptimizer {
     private static final Logger log = LoggerFactory.getLogger(PngOptimizer.class);
     private PngImageDecoder decoder = new PngImageDecoder();
     private PngImageEncoder encoder = new PngImageEncoder();
+    private ColorMapper mapper = new BaseColorMapper();
     private PngData mPng;
 
     private ArrayList<PngData> mFrameDatas;
@@ -68,10 +74,15 @@ public class PngOptimizer {
 
         for (PngImage image : images) {
             // compute color table
-            Map<Color, Color> map = reducer.reduce(image.getPixels(), 256);
+            Map<Color, Color> colorMap = reducer.reduce(image.getPixels(), 256);
 
+            // compute color index in color table
+            ApngIHDRChunk ihdr = new ApngIHDRChunk();
+            ihdr.parse(new ByteArrayPngChunk(chunks.get(image.getIhdrIndex()).getData()));
+
+            Mapping pixelsMap = mapper.mapping(image.getPixels(), ihdr.getHeight(), colorMap);
             // make image chunks
-            newChunks.addAll(encoder.encode(image.getPixels(), map, chunks.get(image.getIhdrIndex()).getData()));
+            newChunks.addAll(encoder.encode(pixelsMap.pixelIndexes, ihdr.getHeight(), pixelsMap.colorTable));
         }
         return newChunks;
     }
