@@ -12,7 +12,7 @@ import java.util.Random;
  * @since 17/1/3, 下午12:37
  */
 public class ColorSimuMapper extends BaseColorMapper {
-    private static final int R = 10;
+    private static final int R = 8;
     private static final int MAX_DIST = 128;
     private Random rand = new Random();
 
@@ -26,7 +26,6 @@ public class ColorSimuMapper extends BaseColorMapper {
         int[] dists = new int[4 * R * R];
         byte[] indexes = mapping.pixelIndexes;
         mapping.pixelIndexes = new byte[mapping.pixelIndexes.length];
-        //Color[] centers = new Color[R * R];
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
@@ -67,8 +66,7 @@ public class ColorSimuMapper extends BaseColorMapper {
                 if (i > 0) {
                     int disAll = 0;
                     for (int dis : dists) disAll += dis;
-                    int idx = rand.nextInt(i);
-                    disAll -= dists[i];
+                    int idx = 0;
                     while (disAll > 0) {
                         idx = rand.nextInt(i);
                         disAll -= dists[idx];
