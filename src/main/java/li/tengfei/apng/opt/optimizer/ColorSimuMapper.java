@@ -19,6 +19,121 @@ public class ColorSimuMapper extends BaseColorMapper {
     @Override
     protected void genIndexedImage(Color[] pixels, int height, Map<Color, Color> colorMap, HashMap<Color, Integer> colorIndex, Mapping mapping) {
         super.genIndexedImage(pixels, height, colorMap, colorIndex, mapping);
+        int width = pixels.length / height;
+        Color[][] orig = new Color[width][height];
+        byte[][] indexed = new byte[width][height];
+        int[][][] gradient = new int[width][height][4];
+        // count gradient pixels at four direction ,
+        // index:  0: top, 1: left, 2: right, 3: bottom
+        // value: -1 means not init, >= 0 means gradient pixels at the direction
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                orig[x][y] = pixels[y * width + x];
+                indexed[x][y] = mapping.pixelIndexes[y * width + x];
+                for (int d = 0; d < 4; d++) gradient[x][y][d] = -1;
+            }
+        }
+
+        // gradient detection
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                // update top count
+                if (y == 0 || gradient[x][y][3] == 0) gradient[x][y][0] = 0;
+                else gradient[x][y][0] = gradient[x][y][0] + 1;
+
+                // update left count
+                if (x == 0 || gradient[x][y][2] == 0) gradient[x][y][1] = 0;
+                else gradient[x][y][1] = gradient[x][y][1] + 1;
+
+                // update right count
+                gradient[x][y][2] = gradientPixelsCount(orig, x, y, 2);
+
+                // update bottom count
+                gradient[x][y][3] = gradientPixelsCount(orig, x, y, 3);
+            }
+        }
+
+        // gradient detection
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int g = 0;
+                for (int d = 0; d < 4; d++) g += gradient[x][y][d];
+                if (g > 4) {
+                    mapping.pixelIndexes[width * y + x] = (byte)((mapping.colorTable.length-1) & 0xff);
+                }
+
+            }
+        }
+    }
+
+    /**
+     * get gradient Pixels Count
+     *
+     * @param colors    image map
+     * @param cx        current position x
+     * @param cy        current position x
+     * @param direction direction, 2: right, 3: bottom
+     * @return gradient Pixels Count
+     */
+    private int gradientPixelsCount(Color[][] colors, int cx, int cy, int direction) {
+        int width = colors.length;
+        int height = colors[0].length;
+        int count = 0;
+
+        if (direction == 2) {
+            boolean lastPixelIsGradient = cx < width - 2;
+            for (int x = cx + 1; x < width - 1; x++) {
+                if (isGradient(colors[x - 1][cy], colors[x][cy], colors[x + 1][cy])) {
+                    count++;
+                } else {
+                    lastPixelIsGradient = false;
+                    break;
+                }
+            }
+            if (lastPixelIsGradient) count++;
+        } else if (direction == 3) {
+            boolean lastPixelIsGradient = cy < height - 2;
+            for (int y = cy + 1; y < height - 1; y++) {
+                if (isGradient(colors[cx][y - 1], colors[cx][y], colors[cx][y + 1])) {
+                    count++;
+                } else {
+                    lastPixelIsGradient = false;
+                    break;
+                }
+            }
+            if (lastPixelIsGradient) count++;
+        }
+
+        return count;
+    }
+
+    /**
+     * check is the three colors gradient
+     */
+    private boolean isGradient(Color c1, Color c2, Color c3) {
+        int dR1 = (c2.getRed() - c1.getRed());
+        int dG1 = (c2.getGreen() - c1.getGreen());
+        int dB1 = (c2.getBlue() - c1.getBlue());
+        int dA1 = (c2.getAlpha() - c1.getAlpha());
+        // color not changed
+        if (dR1 * dR1 + dG1 * dG1 + dB1 * dB1 + dA1 * dA1 < 2) return false;
+
+        int dR2 = (c3.getRed() - c2.getRed());
+        int dG2 = (c3.getGreen() - c2.getGreen());
+        int dB2 = (c3.getBlue() - c2.getBlue());
+        int dA2 = (c3.getAlpha() - c2.getAlpha());
+
+
+        int dR = dR2 - dR1;
+        int dG = dG2 - dG1;
+        int dB = dB2 - dB1;
+        int dA = dA2 - dA1;
+        return dR * dR + dG * dG + dB * dB + dA * dA < 4;
+    }
+
+
+    protected void olgGenIndexedImage(Color[] pixels, int height, Map<Color, Color> colorMap, HashMap<Color, Integer> colorIndex, Mapping mapping) {
+        super.genIndexedImage(pixels, height, colorMap, colorIndex, mapping);
 
         int width = pixels.length / height;
 
