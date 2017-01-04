@@ -14,6 +14,20 @@ import java.util.Random;
 public class ColorSimuMapper extends BaseColorMapper {
     private static final int R = 8;
     private static final int MAX_DIST = 128;
+
+    /**
+     * the same color detection if:
+     * the first and last color's channel value square_sum not big than this.
+     * when the value turn bigger, the smaller gradient pixels will be detected
+     */
+    private static final int SAME_COLOR_DELTA = 1;
+    /**
+     * the gradient color detection if:
+     * the second-first and last-second color's channel value change square_sum not big than this.
+     * when the value turn bigger, the more gradient pixels will be detected, but lost more edge
+     */
+    private static final int GRADIENT_DELTA = 3;
+
     private Random rand = new Random();
 
     @Override
@@ -120,7 +134,7 @@ public class ColorSimuMapper extends BaseColorMapper {
         int dB3 = (c3.getBlue() - c1.getBlue());
         int dA3 = (c3.getAlpha() - c1.getAlpha());
         // color not changed
-        if (dR3 * dR3 + dG3 * dG3 + dB3 * dB3 + dA3 * dA3 < 1) return false;
+        if (dR3 * dR3 + dG3 * dG3 + dB3 * dB3 + dA3 * dA3 < SAME_COLOR_DELTA) return false;
 
         int dR1 = (c2.getRed() - c1.getRed());
         int dG1 = (c2.getGreen() - c1.getGreen());
@@ -136,7 +150,7 @@ public class ColorSimuMapper extends BaseColorMapper {
         int dG = dG2 - dG1;
         int dB = dB2 - dB1;
         int dA = dA2 - dA1;
-        return dR * dR + dG * dG + dB * dB + dA * dA < 4;
+        return dR * dR + dG * dG + dB * dB + dA * dA < GRADIENT_DELTA;
     }
 
 
