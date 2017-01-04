@@ -76,9 +76,14 @@ public class ColorSimuMapper extends BaseColorMapper {
             for (int x = 0; x < width; x++) {
                 int g = 0;
                 for (int d = 0; d < 4; d++) g += gradient[x][y][d];
-                if (g > 4) {
-                    mapping.pixelIndexes[width * y + x] = (byte) ((mapping.colorTable.length - 1) & 0xff);
+                if (g >= 12) {
+                    mapping.pixelIndexes[width * y + x] = (byte) (139 & 0xff);
                 }
+
+//                if ((gradient[x][y][0] == 0 && gradient[x][y][3] > 0) ||
+//                        (gradient[x][y][1] == 0 && gradient[x][y][2] > 0)) {
+//                    mapping.pixelIndexes[width * y + x] = (byte) ((139) & 0xff);
+//                }
 
             }
         }
@@ -99,27 +104,23 @@ public class ColorSimuMapper extends BaseColorMapper {
         int count = 0;
 
         if (direction == 2) {
-            boolean lastPixelIsGradient = cx < width - 2;
             for (int x = cx + 1; x < width - 1; x++) {
                 if (isGradient(colors[x - 1][cy], colors[x][cy], colors[x + 1][cy])) {
                     count++;
                 } else {
-                    lastPixelIsGradient = false;
                     break;
                 }
             }
-            if (lastPixelIsGradient) count++;
+            if (count > 0) count++; // count last pixel
         } else if (direction == 3) {
-            boolean lastPixelIsGradient = cy < height - 2;
             for (int y = cy + 1; y < height - 1; y++) {
                 if (isGradient(colors[cx][y - 1], colors[cx][y], colors[cx][y + 1])) {
                     count++;
                 } else {
-                    lastPixelIsGradient = false;
                     break;
                 }
             }
-            if (lastPixelIsGradient) count++;
+            if (count > 0) count++;  // count last pixel
         }
 
         return count;
