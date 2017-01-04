@@ -6,6 +6,7 @@ import lu.luz.jzopfli.Zopfli_lib;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.IllegalFormatFlagsException;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 
@@ -45,7 +46,11 @@ public class PngImageEncoder {
     /**
      * encode image into indexed ColorType chunks: IDHR + PLTE [ + TRNS ] IDAT
      */
-    public ArrayList<PngChunkData> encode(byte[] pixelIndexes, int height, Color[] colorTable) {
+    public ArrayList<PngChunkData> encode(byte[] pixelIndexes, final int height, Color[] colorTable) {
+        if (pixelIndexes.length % height != 0)
+            throw new IllegalFormatFlagsException("pixels % height != 0, not a legal image");
+        final int width = pixelIndexes.length / height;
+
         // calculate bitDepth
         int maxValue = colorTable.length - 1;
         int bitDepth;
@@ -55,8 +60,11 @@ public class PngImageEncoder {
         else bitDepth = 8;
 
         // generate indexed image data
-        byte[] data = new byte[pixelIndexes.length * bitDepth / 8 + height];
-        final int rowBytes = data.length / height;
+        int rowBytes = width * bitDepth / 8;
+        final int lastBlank = 8 - (width * bitDepth % 8);
+        if (lastBlank != 8) rowBytes++;
+        rowBytes++;// add filter type byte
+        byte[] data = new byte[rowBytes * height];
 
         int p = 0;
         for (int i = 0; i < data.length; i++) {
@@ -65,21 +73,25 @@ public class PngImageEncoder {
                 continue;
             }
             byte dataByte = 0;
+            int skip = lastBlank == 0 ? 0 : i % rowBytes == rowBytes - 1 ? lastBlank : 0;
             switch (bitDepth) {
                 case 1:
-                    for (int x = 0; x < 8; x++) {
-                        dataByte = (byte) ((dataByte << 1) | (pixelIndexes[p++] & 0x1));
+                    for (int x = 0; x < 8 - skip; x++) {
+                        dataByte = (byte) ((dataByte << 1) | (pixelIndexes[p++] & 0x1) & 0xff);
                     }
+                    if (skip > 0) dataByte = (byte) ((dataByte << skip) & 0xff);
                     break;
                 case 2:
-                    for (int x = 0; x < 4; x++) {
-                        dataByte = (byte) ((dataByte << 2) | (pixelIndexes[p++] & 0x3));
+                    for (int x = 0; x < 4 - skip; x++) {
+                        dataByte = (byte) ((dataByte << 2) | (pixelIndexes[p++] & 0x3) & 0xff);
                     }
+                    if (skip > 0) dataByte = (byte) ((dataByte << skip * 2) & 0xff);
                     break;
                 case 4:
-                    for (int x = 0; x < 2; x++) {
-                        dataByte = (byte) ((dataByte << 4) | (pixelIndexes[p++] & 0xf));
+                    for (int x = 0; x < 2 - skip; x++) {
+                        dataByte = (byte) ((dataByte << 4) | (pixelIndexes[p++] & 0xf) & 0xff);
                     }
+                    if (skip > 0) dataByte = (byte) ((dataByte << skip * 4) & 0xff);
                     break;
                 case 8:
                     dataByte = (byte) (pixelIndexes[p++] & 0xff);
