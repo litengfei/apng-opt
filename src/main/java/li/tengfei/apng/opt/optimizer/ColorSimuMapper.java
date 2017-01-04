@@ -58,7 +58,7 @@ public class ColorSimuMapper extends BaseColorMapper {
             for (int x = 0; x < width; x++) {
                 int g = 0;
                 for (int d = 0; d < 4; d++) g += gradient[x][y][d];
-                if (g > 4) {
+                if (g > 3) {
                     mapping.pixelIndexes[width * y + x] = (byte)((mapping.colorTable.length-1) & 0xff);
                 }
 
@@ -111,17 +111,23 @@ public class ColorSimuMapper extends BaseColorMapper {
      * check is the three colors gradient
      */
     private boolean isGradient(Color c1, Color c2, Color c3) {
+        int dR3 = (c3.getRed() -    c1.getRed());
+        int dG3 = (c3.getGreen() -  c1.getGreen());
+        int dB3 = (c3.getBlue() -   c1.getBlue());
+        int dA3 = (c3.getAlpha() -  c1.getAlpha());
+        // color not changed
+        if (dR3 * dR3 + dG3 * dG3 + dB3 * dB3 + dA3 * dA3 < 1) return false;
+
         int dR1 = (c2.getRed() - c1.getRed());
         int dG1 = (c2.getGreen() - c1.getGreen());
         int dB1 = (c2.getBlue() - c1.getBlue());
         int dA1 = (c2.getAlpha() - c1.getAlpha());
-        // color not changed
-        if (dR1 * dR1 + dG1 * dG1 + dB1 * dB1 + dA1 * dA1 < 2) return false;
 
         int dR2 = (c3.getRed() - c2.getRed());
         int dG2 = (c3.getGreen() - c2.getGreen());
         int dB2 = (c3.getBlue() - c2.getBlue());
         int dA2 = (c3.getAlpha() - c2.getAlpha());
+
 
 
         int dR = dR2 - dR1;
