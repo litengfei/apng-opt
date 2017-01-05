@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+import static li.tengfei.apng.base.AngPatch.typeCodeHash;
+
 /**
  * color simulation mapper
  *
@@ -30,10 +32,15 @@ public class ColorSimuMapper extends BaseColorMapper {
 
     private Random rand = new Random();
 
+    private byte[] mCacheColors = {};
+    private int mCacheCount = 0;
+
+
     @Override
     protected void genIndexedImage(Color[] pixels, int height, Map<Color, Color> colorMap, HashMap<Color, Integer> colorIndex, Mapping mapping) {
         super.genIndexedImage(pixels, height, colorMap, colorIndex, mapping);
         int width = pixels.length / height;
+        initCache(width, height);
         Color[][] orig = new Color[width][height];
         byte[][] indexed = new byte[width][height];
         int[][][] gradient = new int[width][height][4];
@@ -74,17 +81,30 @@ public class ColorSimuMapper extends BaseColorMapper {
         // gradient detection
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                int g = 0;
-                for (int d = 0; d < 4; d++) g += gradient[x][y][d];
-                if (g >= 12) {
-                    mapping.pixelIndexes[width * y + x] = (byte) (139 & 0xff);
+                // select max length gradient direction, and the start color not equals the end color
+                int beginV = 0, endV = 0, deltaV = 0;
+                if (gradient[x][y][0] > 0 && gradient[x][y][3] > 0) {
+                    beginV = y - gradient[x][y][0];
+                    endV = y + gradient[x][y][3];
+                    if (indexed[x][beginV] != indexed[x][endV]) {
+                        deltaV = endV - beginV;
+                    }
+                }
+                int beginH = 0, endH = 0, deltaH = 0;
+                if (gradient[x][y][1] > 0 && gradient[x][y][2] > 0) {
+                    beginH = x - gradient[x][y][1];
+                    endH = x + gradient[x][y][2];
+                    if (indexed[beginH][y] != indexed[endH][y]) {
+                        deltaH = endH - beginH;
+                    }
                 }
 
-//                if ((gradient[x][y][0] == 0 && gradient[x][y][3] > 0) ||
-//                        (gradient[x][y][1] == 0 && gradient[x][y][2] > 0)) {
-//                    mapping.pixelIndexes[width * y + x] = (byte) ((139) & 0xff);
-//                }
-
+                if (deltaV > deltaH && deltaV > 0) {
+                    mapping.pixelIndexes[width * y + x] = pickGradientColor(indexed, x, y, 3, beginV, endV);
+                } else if (deltaH > 0) {
+                    mapping.pixelIndexes[width * y + x] = pickGradientColor(indexed, x, y, 2, beginH, endH);
+                }
+                // mapping.pixelIndexes[width * y + x] = (byte) (139 & 0xff);
             }
         }
     }
@@ -152,6 +172,54 @@ public class ColorSimuMapper extends BaseColorMapper {
         int dB = dB2 - dB1;
         int dA = dA2 - dA1;
         return dR * dR + dG * dG + dB * dB + dA * dA < GRADIENT_DELTA;
+    }
+
+
+    private void initCache(int width, int height) {
+        int i = width > height ? width : height;
+        if (i > mCacheColors.length) {
+            mCacheColors = new byte[i];
+        }
+    }
+
+    private void cacheColor(byte color) {
+        boolean notExists = true;
+        for (int i = 0; i < mCacheCount; i++) {
+            if (mCacheColors[i] == color) {
+                notExists = false;
+                break;
+            }
+        }
+        if (notExists) mCacheColors[mCacheCount++] = color;
+    }
+
+    /**
+     * picked gradient color for current position
+     *
+     * @param indexed   indexed color map
+     * @param x         current position x
+     * @param y         current position y
+     * @param direction 2 for Horizontal, else(3) for Vertical
+     * @param begin     gradient begin index
+     * @param end       gradient end index
+     * @return selected color
+     */
+    private byte pickGradientColor(byte[][] indexed, int x, int y, int direction, int begin, int end) {
+        mCacheCount = 0;
+        for (int i = begin; i <= end; i++) {
+            if (direction == 2) cacheColor(indexed[i][y]);
+            else cacheColor(indexed[x][i]);
+        }
+
+        int max = end - begin;
+        int pos = direction == 2 ? x - begin : y - begin;
+        int rnd = (typeCodeHash(x) + typeCodeHash(y)) % 1000;
+
+        double colorPos = pos * mCacheCount * 1000 / max;
+        int colorA = pos * (mCacheCount-1) / max;
+        int rateB = (int) Math.floor((colorPos - colorA) * 1000);
+        if (rnd <= rateB) return mCacheColors[colorA + 1];
+        else return mCacheColors[colorA];
     }
 
 
