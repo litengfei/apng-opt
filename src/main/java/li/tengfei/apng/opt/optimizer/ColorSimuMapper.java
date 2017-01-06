@@ -5,8 +5,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import static li.tengfei.apng.base.AngPatch.typeCodeHash;
-
 /**
  * color simulation mapper
  *
@@ -211,15 +209,21 @@ public class ColorSimuMapper extends BaseColorMapper {
             else cacheColor(indexed[x][i]);
         }
 
+
         int max = end - begin;
         int pos = direction == 2 ? x - begin : y - begin;
-        int rnd = (typeCodeHash(x) + typeCodeHash(y)) % 1000;
+        int colorA = pos * (mCacheCount - 1) / max;
 
-        double colorPos = pos * mCacheCount * 1000 / max;
-        int colorA = pos * (mCacheCount-1) / max;
-        int rateB = (int) Math.floor((colorPos - colorA) * 1000);
-        if (rnd <= rateB) return mCacheColors[colorA + 1];
-        else return mCacheColors[colorA];
+        int rateB = pos * (mCacheCount - 1) % max;
+        int rateAll = max - 1;
+
+        System.out.println(rateB + "  " + rateAll);
+
+        if (rateB == 0) return mCacheColors[colorA];
+        else if (rateB == rateAll) return mCacheColors[colorA + 1];
+        else if (rateB * 2 > rateAll && (x + y) % (rateB / (rateAll - rateB) + 1) == 0) return mCacheColors[colorA];
+        else if ((x + y) % ((rateAll - rateB) / rateB + 1) == 0) return mCacheColors[colorA + 1];
+        else return indexed[x][y];
     }
 
 
