@@ -329,7 +329,7 @@ public class KMeansReducer implements ColorReducer {
         return changed;
     }
 
-    public static class IndexCount implements Comparable<IndexCount> {
+    private static class IndexCount implements Comparable<IndexCount> {
         int index;
         int count;
 
@@ -344,7 +344,7 @@ public class KMeansReducer implements ColorReducer {
         }
     }
 
-    public static class ColorCount implements Comparable<ColorCount> {
+    private static class ColorCount implements Comparable<ColorCount> {
         Color color;
         int count;
 
