@@ -23,6 +23,7 @@ public class ColorUtils {
         dist += delta * delta;
         delta = a.getAlpha() - b.getAlpha();
         dist += delta * delta;
+        //dist *= (a.getAlpha() + b.getAlpha())/4;
         return dist;
     }
 }

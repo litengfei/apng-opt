@@ -112,7 +112,7 @@ public class KMeansReducer implements ColorReducer {
         int countOverLastMin = 0;
         long lastMillis = System.currentTimeMillis();
         while (cluster(colors, centers, indexes) > 0) {
-            //splitMaxCenters(colors, counts, centers, indexes, 0.000005f);
+            splitMaxCenters(colors, counts, centers, indexes, 0.0005f);
             int changed = refreshCenters(colors, centers, counts, indexes);
 
             long millis = System.currentTimeMillis();
@@ -273,22 +273,22 @@ public class KMeansReducer implements ColorReducer {
                 W += count;
             }
 
-            Color vCenter = new Color(
+            Color center = new Color(
                     (int) Math.round(R / W),
                     (int) Math.round(G / W),
                     (int) Math.round(B / W),
                     (int) Math.round(A / W));
 
-            Color center = centers[i];
-            int minDist = Integer.MAX_VALUE;
-            for (int j = 0; j < colors.length; j++) {
-                if (indexes[j] != i) continue;
-                int dist = distance(vCenter, colors[j]);
-                if (dist < minDist) {
-                    minDist = dist;
-                    center = colors[j];
-                }
-            }
+//            Color center = centers[i];
+//            int minDist = Integer.MAX_VALUE;
+//            for (int j = 0; j < colors.length; j++) {
+//                if (indexes[j] != i) continue;
+//                int dist = distance(vCenter, colors[j]);
+//                if (dist < minDist) {
+//                    minDist = dist;
+//                    center = colors[j];
+//                }
+//            }
 
             if (!center.equals(centers[i])) {
                 changed++;
