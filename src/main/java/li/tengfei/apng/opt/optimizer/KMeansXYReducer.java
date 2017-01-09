@@ -10,16 +10,15 @@ import static li.tengfei.apng.opt.optimizer.ColorUtils.distance;
 
 
 /**
- * K-Means Color Reducer
+ * K-Means and XY Color Reducer for png image
  *
  * @author ltf
  * @since 16/12/14, 上午9:52
  */
-public class KMeansReducer implements ColorReducer {
-    private static final Logger log = LoggerFactory.getLogger(KMeansReducer.class);
+public class KMeansXYReducer {
+    private static final Logger log = LoggerFactory.getLogger(KMeansXYReducer.class);
     private static final int MAX_CACHE_DISTS = 1024 * 10; // 200M
     private Random rand = new Random();
-    private int mPixels;
     private ColorReducer initReducer;
 
     public ColorReducer getInitReducer() {
@@ -33,49 +32,48 @@ public class KMeansReducer implements ColorReducer {
     /**
      * reduce color use k-means++ algorithm
      */
-    @Override
-    public Map<Color, Color> reduce(Color[] pixels, int target) {
+    public Mapping reduce(Color[][] pixels, int target) {
+        if (pixels.length == 0) throw new IllegalFormatFlagsException("not a valid image: 0 row pixels");
         // count color appearance
-        mPixels = pixels.length;
         HashMap<Color, Integer> countMap = new HashMap<Color, Integer>();
-        for (Color p : pixels) {
-            if (countMap.containsKey(p)) {
-                countMap.put(p, countMap.get(p) + 1);
-            } else {
-                countMap.put(p, 1);
+        for (Color[] ps : pixels) {
+            for (Color p : ps) {
+                if (countMap.containsKey(p)) {
+                    countMap.put(p, countMap.get(p) + 1);
+                } else {
+                    countMap.put(p, 1);
+                }
             }
         }
 
         // return if not need reduce
         if (countMap.size() <= target) {
-            HashMap<Color, Color> mapping = new HashMap<>(countMap.size());
+            Mapping mapping = new Mapping();
+            mapping.colorTable = new Color[countMap.size()];
+            mapping.image = new byte[pixels.length][pixels[0].length];
+            Map<Color, Byte> colorByteMap = new HashMap<>(countMap.size());
+            int i = 0;
             for (Color color : countMap.keySet()) {
-                mapping.put(color, color);
+                mapping.colorTable[i] = color;
+                colorByteMap.put(color, (byte) (i & 0xff));
+                i++;
+            }
+            for (int x = 0; x < pixels.length; x++) {
+                for (int y = 0; y < pixels[0].length; y++) {
+                    mapping.image[x][y] = colorByteMap.get(pixels[x][y]);
+                }
             }
             return mapping;
         }
 
-        // set colors [ sorted by count ]
-        ArrayList<ColorCount> colorCounts = new ArrayList<>(countMap.size());
-        Color[] colors = new Color[countMap.size()];
-        int[] counts = new int[countMap.size()];
-        for (Map.Entry<Color, Integer> e : countMap.entrySet()) {
-            colorCounts.add(new ColorCount(e.getKey(), e.getValue()));
-        }
-        Collections.sort(colorCounts);
-        for (int i = 0; i < colorCounts.size(); i++) {
-            colors[i] = colorCounts.get(i).color;
-            counts[i] = colorCounts.get(i).count;
-        }
-
-        int[] indexes = new int[countMap.size()];
+        int[][] indexes = new int[pixels.length][pixels[0].length];
         Color[] centers = new Color[target];
 
 
         // init centers
         if (initReducer == null) {
             // use inner center init method
-            initCenters(colors, counts, indexes, centers);
+            initCenters(colors, indexes, centers);
         } else {
             // use out center init method
             Map<Color, Color> initMapping = initReducer.reduce(pixels, target);
@@ -107,7 +105,8 @@ public class KMeansReducer implements ColorReducer {
      * @param indexes output colors' mapping
      * @param centers output reduced colors
      */
-    private void reduce(Color[] colors, int[] counts, int[] indexes, Color[] centers) {
+
+    private void reduce(Color[] colors, int[] indexes, Color[] centers) {
         int lastMinChanged = Integer.MAX_VALUE;
         int countOverLastMin = 0;
         long lastMillis = System.currentTimeMillis();
@@ -155,16 +154,6 @@ public class KMeansReducer implements ColorReducer {
         cluster(colors, centers, indexes);
 
         splitMaxCenters(colors, counts, centers, indexes, 0.033f);
-    }
-
-    private Color randomPickColor(Color[] colors, int[] counts) {
-        int candidateCount = mPixels;
-        int candidateIndex = 0;
-        while (candidateCount > 0) {
-            candidateIndex = rand.nextInt(counts.length);
-            candidateCount -= counts[candidateIndex];
-        }
-        return colors[candidateIndex];
     }
 
     /**
@@ -329,33 +318,8 @@ public class KMeansReducer implements ColorReducer {
         return changed;
     }
 
-    public static class IndexCount implements Comparable<IndexCount> {
-        int index;
-        int count;
-
-        public IndexCount(int index, int count) {
-            this.index = index;
-            this.count = count;
-        }
-
-        @Override
-        public int compareTo(IndexCount o) {
-            return o.count - this.count;
-        }
-    }
-
-    public static class ColorCount implements Comparable<ColorCount> {
-        Color color;
-        int count;
-
-        public ColorCount(Color color, int count) {
-            this.color = color;
-            this.count = count;
-        }
-
-        @Override
-        public int compareTo(ColorCount o) {
-            return o.count - this.count;
-        }
+    public static class Mapping {
+        public Color[] colorTable;
+        public byte[][] image;
     }
 }
