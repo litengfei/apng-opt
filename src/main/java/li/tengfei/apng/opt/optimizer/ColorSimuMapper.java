@@ -221,9 +221,11 @@ public class ColorSimuMapper extends BaseColorMapper {
 
         if (rateB == 0) return mCacheColors[colorA];
         else if (rateB == rateAll) return mCacheColors[colorA + 1];
-        else if (rateB * 2 > rateAll && (x + y) % (rateB / (rateAll - rateB) + 1) == 0) return mCacheColors[colorA];
-        else if ((x + y) % ((rateAll - rateB) / rateB + 1) == 0) return mCacheColors[colorA + 1];
-        else return indexed[x][y];
+        else if (rateB * 2 > rateAll) {
+            return mCacheColors[(x + y) % (rateB / (rateAll - rateB) + 1) == 0 ? colorA : colorA + 1];
+        } else {
+            return mCacheColors[(x + y) % ((rateAll - rateB) / rateB + 1) == 0 ? colorA + 1 : colorA];
+        }
     }
 
 
