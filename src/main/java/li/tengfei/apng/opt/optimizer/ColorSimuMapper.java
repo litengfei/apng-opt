@@ -97,11 +97,11 @@ public class ColorSimuMapper extends BaseColorMapper {
                     }
                 }
 
-//                if (deltaV > deltaH && deltaV > 0) {
-//                    mapping.pixelIndexes[width * y + x] = pickGradientColor(indexed, x, y, 3, beginV, endV);
-//                } else if (deltaH > 0) {
-//                    mapping.pixelIndexes[width * y + x] = pickGradientColor(indexed, x, y, 2, beginH, endH);
-//                }
+                if (deltaV > deltaH && deltaV > 0) {
+                    mapping.pixelIndexes[width * y + x] = pickGradientColor(indexed, x, y, 3, beginV, endV);
+                } else if (deltaH > 0) {
+                    mapping.pixelIndexes[width * y + x] = pickGradientColor(indexed, x, y, 2, beginH, endH);
+                }
                 // mapping.pixelIndexes[width * y + x] = (byte) (139 & 0xff);
             }
         }
@@ -216,6 +216,8 @@ public class ColorSimuMapper extends BaseColorMapper {
 
         int rateB = pos * (mCacheCount - 1) % max;
         int rateAll = max - 1;
+
+        System.out.println(rateB + "  " + rateAll);
 
         if (rateB == 0) return mCacheColors[colorA];
         else if (rateB == rateAll) return mCacheColors[colorA + 1];
