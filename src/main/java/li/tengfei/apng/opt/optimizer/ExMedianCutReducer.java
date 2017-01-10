@@ -24,6 +24,14 @@ public class ExMedianCutReducer {
         for (PColor color : colors) {
             dists += Math.sqrt(ColorUtils.distance(color, center));
         }
+
+//        long dists = 0;
+//        for (int p = 0; p < colors.length; p++) {
+//            for (int q = p; q < colors.length; q++) {
+//                dists += Math.sqrt(distance(colors[p], colors[q]));
+//            }
+//        }
+//        return dists;
         return dists;
     }
 
@@ -61,30 +69,49 @@ public class ExMedianCutReducer {
      * @return medianCut success or not
      */
     private static boolean medianCut(PColor[] colors, PColor[][] subs) {
-        int maxDist = 0;
-        PColor maxP = colors[0];
-        PColor maxQ = colors[0];
-        for (int p = 0; p < colors.length; p++) {
-            for (int q = p + 1; q < colors.length; q++) {
-                int dist = distance(colors[p], colors[q]);
-                if (maxDist < dist) {
-                    maxDist = dist;
-                    maxP = colors[p];
-                    maxQ = colors[q];
-                }
+        long[] channelSums = new long[COLOR_BYTES];
+        long[] channelDists = new long[COLOR_BYTES];
+        double[] channelAvgs = new double[COLOR_BYTES];
+        int count = 0;
+
+        // calculate average channel value
+        for (PColor color : colors) {
+            for (int i = 0; i < COLOR_BYTES; i++) {
+                channelSums[i] += getChannelValue(color, i);
+            }
+            count++;
+        }
+        for (int i = 0; i < COLOR_BYTES; i++) {
+            channelAvgs[i] = (double) channelSums[i] / count;
+        }
+
+        // calculate channel distances
+        for (PColor color : colors) {
+            for (int i = 0; i < COLOR_BYTES; i++) {
+                channelDists[i] += Math.round(Math.abs((getChannelValue(color, i) - channelAvgs[i])));
             }
         }
+
+        // select cut channel
+        int cutChannel = 0;
+        double cutAvg;
+        long maxDist = 0;
+        for (int i = 0; i < COLOR_BYTES; i++) {
+            if (maxDist < channelDists[i]) {
+                maxDist = channelDists[i];
+                cutChannel = i;
+            }
+        }
+        cutAvg = channelAvgs[cutChannel];
 
         // median cut colors
         ArrayList<PColor> subA = new ArrayList<>();
         ArrayList<PColor> subB = new ArrayList<>();
         ArrayList<PColor> subE = new ArrayList<>();
         for (PColor color : colors) {
-            int toP = distance(color, maxP);
-            int toQ = distance(color, maxQ);
-
-            if (toP < toQ) subA.add(color);
-            else if (toP > toQ) subB.add(color);
+            int channelValue = getChannelValue(color, cutChannel);
+            if (channelValue < cutAvg) subA.add(color);
+            else if (channelValue > cutAvg) subB.add(color);
             else subE.add(color);
         }
         if (subA.size() <= subB.size()) subA.addAll(subE);
