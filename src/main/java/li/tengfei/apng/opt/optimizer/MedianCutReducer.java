@@ -20,11 +20,13 @@ public class MedianCutReducer implements ColorReducer {
     /**
      * Cut Ranking, the biggest one is cut first
      */
-    private static int ranking(NColor[] colors) {
-        int counts = 0;
+    private static long ranking(NColor[] colors) {
+        long dists = 0;
         Color center = getMedianColor(colors);
-        for (NColor color : colors) counts += distance(center, center);
-        return counts;
+        for (NColor color : colors) {
+            dists += Math.sqrt(distance(color, center)) * color.count;
+        }
+        return (dists);
     }
 
     /**
@@ -273,7 +275,7 @@ public class MedianCutReducer implements ColorReducer {
         private static class Node {
             static final int CANT_CUT_RANK = Integer.MIN_VALUE;
             final NColor[] colors;
-            int rank;
+            long rank;
             Node next;
             Node pre;
 
