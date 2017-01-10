@@ -25,4 +25,33 @@ public class ColorUtils {
         dist += delta * delta;
         return dist;
     }
+
+    /**
+     * convert pixels array to bitmap
+     */
+    public static Color[][] arrayToMap(Color[] pixels, int height) {
+        int width = pixels.length / height;
+        Color[][] map = new Color[height][width];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                map[y][x] = pixels[y * width + x];
+            }
+        }
+        return map;
+    }
+
+    /**
+     * convert bitmap to index array
+     */
+    public static byte[] mapToArray(byte[][] map) {
+        if (map.length == 0) return new byte[0];
+        byte[] bytes = new byte[map.length * map[0].length];
+        int i = 0;
+        for (int y = 0; y < map.length; y++) {
+            for (int x = 0; x < map[0].length; x++) {
+                bytes[i++] = map[y][x];
+            }
+        }
+        return bytes;
+    }
 }
