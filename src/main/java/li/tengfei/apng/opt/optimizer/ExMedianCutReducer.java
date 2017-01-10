@@ -6,8 +6,6 @@ import java.util.HashMap;
 import java.util.IllegalFormatFlagsException;
 import java.util.Map;
 
-import static li.tengfei.apng.opt.optimizer.ColorUtils.distance;
-
 /**
  * Extended MedianCut Color Reducer with x\y
  *
@@ -16,7 +14,6 @@ import static li.tengfei.apng.opt.optimizer.ColorUtils.distance;
  */
 public class ExMedianCutReducer {
     private static final int COLOR_BYTES = 4;
-    private Reducer reducer;
 
     /**
      * Cut Ranking, the biggest one is cut first
@@ -25,9 +22,43 @@ public class ExMedianCutReducer {
         long dists = 0;
         Color center = getMedianColor(colors);
         for (PColor color : colors) {
-            dists += Math.sqrt(distance(color, center));
+            dists += Math.sqrt(ColorUtils.distance(color, center));
         }
-        return (dists);
+
+//        long dists = 0;
+//        for (int p = 0; p < colors.length; p++) {
+//            for (int q = p; q < colors.length; q++) {
+//                dists += Math.sqrt(distance(colors[p], colors[q]));
+//            }
+//        }
+//        return dists;
+        return dists;
+    }
+
+    /**
+     * color distance
+     */
+    public static int distance(PColor a, PColor b) {
+        if (a.equals(b)) return 0;
+        int cDist = 0;
+        int delta = a.getRed() - b.getRed();
+        cDist += delta * delta;
+        delta = a.getGreen() - b.getGreen();
+        cDist += delta * delta;
+        delta = a.getBlue() - b.getBlue();
+        cDist += delta * delta;
+        delta = a.getAlpha() - b.getAlpha();
+        cDist += delta * delta;
+
+        int dist = 0;
+        delta = a.x - b.x;
+        dist += delta * delta;
+        delta = a.y - b.y;
+        dist += delta * delta;
+        if (dist <= 100) {
+            cDist *= 100 / dist;
+        }
+        return cDist;
     }
 
     /**
