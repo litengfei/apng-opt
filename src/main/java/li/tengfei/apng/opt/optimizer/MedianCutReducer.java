@@ -75,11 +75,15 @@ public class MedianCutReducer implements ColorReducer {
         // median cut colors
         ArrayList<NColor> subA = new ArrayList<>();
         ArrayList<NColor> subB = new ArrayList<>();
+        ArrayList<NColor> subE = new ArrayList<>();
         for (NColor color : colors) {
             int channelValue = getChannelValue(color, cutChannel);
             if (channelValue < cutAvg) subA.add(color);
-            else subB.add(color);
+            else if (channelValue > cutAvg) subB.add(color);
+            else subE.add(color);
         }
+        if (subA.size() <= subB.size()) subA.addAll(subE);
+        else subB.addAll(subE);
 
         if (subA.size() == 0 || subB.size() == 0) return false;
 
