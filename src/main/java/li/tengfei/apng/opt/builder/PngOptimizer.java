@@ -6,10 +6,8 @@ import li.tengfei.apng.ext.ByteArrayPngChunk;
 import li.tengfei.apng.ext.PngImage;
 import li.tengfei.apng.ext.PngImageDecoder;
 import li.tengfei.apng.ext.PngImageEncoder;
-import li.tengfei.apng.opt.optimizer.ColorMapper;
-import li.tengfei.apng.opt.optimizer.ColorSimuMapper;
-import li.tengfei.apng.opt.optimizer.ColorUtils;
-import li.tengfei.apng.opt.optimizer.ExMedianCutReducer;
+import li.tengfei.apng.opt.optimizer.*;
+import li.tengfei.apng.opt.optimizer.ColorMapper.Mapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,6 +16,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.zip.DataFormatException;
 
 import static li.tengfei.apng.base.PngStream.PNG_IEND_DAT;
@@ -65,21 +64,22 @@ public class PngOptimizer {
     private ArrayList<PngChunkData> colorReduce(ArrayList<PngChunkData> chunks) throws DataFormatException {
 
         ArrayList<PngImage> images = decoder.decodeImages(chunks);
-        //MedianCutReducer reducer = new MedianCutReducer();
-        //reducer.setInitReducer(new MedianCutReducer());
-        ExMedianCutReducer reducer = new ExMedianCutReducer();
+        KMeansReducer reducer = new KMeansReducer();
+        reducer.setInitReducer(new MedianCutReducer());
 
         ArrayList<PngChunkData> newChunks = new ArrayList<>();
 
         for (PngImage image : images) {
+            // compute color table
+            Map<Color, Color> colorMap = reducer.reduce(image.getPixels(), 256);
+
+            // compute color index in color table
             ApngIHDRChunk ihdr = new ApngIHDRChunk();
             ihdr.parse(new ByteArrayPngChunk(chunks.get(image.getIhdrIndex()).getData()));
 
-            // color reduce
-            Color[][] bmp = ColorUtils.arrayToMap(image.getPixels(), ihdr.getHeight());
-            ExMedianCutReducer.Mapping map = reducer.reduce(bmp, 256);
+            Mapping pixelsMap = mapper.mapping(image.getPixels(), ihdr.getHeight(), colorMap);
             // make image chunks
-            newChunks.addAll(encoder.encode(ColorUtils.mapToArray(map.image), ihdr.getHeight(), map.colorTable));
+            newChunks.addAll(encoder.encode(pixelsMap.pixelIndexes, ihdr.getHeight(), pixelsMap.colorTable));
         }
         return newChunks;
     }
