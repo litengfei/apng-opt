@@ -233,7 +233,7 @@ public class MedianCutReducer implements ColorReducer {
                     add(new Node(subColors[1]));
                     break;
                 } else {
-                    node.setCanCut();
+                    node.setCantCut();
                     add(node);
                 }
             }
@@ -282,7 +282,7 @@ public class MedianCutReducer implements ColorReducer {
                 rank = ranking(colors);
             }
 
-            private void setCanCut() {
+            private void setCantCut() {
                 rank = CANT_CUT_RANK;
             }
         }
