@@ -61,17 +61,23 @@ public class ColorSimuMapper extends BaseColorMapper {
         super.genIndexedImage(pixels, height, colorMap, colorIndex, mapping);
         int width = pixels.length / height;
         initCache(width, height);
-        Color[][] orig = new Color      [height][width];
-        byte[][] indexed = new byte     [height][width];
-        int[][][] gradient = new int    [height][width][4];
-        int[][] gradientArea = new int  [height][width];
+        Color[][] orig = new Color[height][width];
+        byte[][] indexed = new byte[height][width];
+        int[][][] gradient = new int[height][width][4];
+        int[][] gradientArea = new int[height][width];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                gradientArea[y][x] = -1; // not in gradient area
+            }
+        }
+
         // count gradient pixels at four direction ,
         // index:  0: top, 1: left, 2: right, 3: bottom
         // value: -1 means not init, >= 0 means gradient pixels at the direction
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                orig    [y][x] = pixels[y * width + x];
-                indexed [y][x] = mapping.pixelIndexes[y * width + x];
+                orig[y][x] = pixels[y * width + x];
+                indexed[y][x] = mapping.pixelIndexes[y * width + x];
                 for (int d = 0; d < 4; d++) gradient[y][x][d] = -1;
             }
         }
@@ -89,12 +95,12 @@ public class ColorSimuMapper extends BaseColorMapper {
                 }
 
                 // update left,right count
-                if (x == 0 || gradient[y][x- 1][2] == 0) {
+                if (x == 0 || gradient[y][x - 1][2] == 0) {
                     gradient[y][x][1] = 0;
                     gradient[y][x][2] = gradientPixelsCount(orig, x, y, 2);
                 } else {
-                    gradient[y][x][1] = gradient[y][x- 1][1] + 1;
-                    gradient[y][x][2] = gradient[y][x- 1][2] - 1;
+                    gradient[y][x][1] = gradient[y][x - 1][1] + 1;
+                    gradient[y][x][2] = gradient[y][x - 1][2] - 1;
                 }
             }
         }
@@ -120,10 +126,9 @@ public class ColorSimuMapper extends BaseColorMapper {
                     }
                 }
 
-                if (deltaV > deltaH && deltaV > 0) {
-                    mapping.pixelIndexes[width * y + x] = pickGradientColor(indexed, x, y, 3, beginV, endV);
-                } else if (deltaH > 0) {
-                    mapping.pixelIndexes[width * y + x] = pickGradientColor(indexed, x, y, 2, beginH, endH);
+                int mark = -1;
+                if (deltaV > 0 || deltaH > 0) {
+                    markGradientArea(gradient, gradientArea, x, y, ++mark);
                 }
                 // mapping.pixelIndexes[width * y + x] = (byte) (139 & 0xff);
             }
@@ -132,34 +137,10 @@ public class ColorSimuMapper extends BaseColorMapper {
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                // select max length gradient direction, and the start color not equals the end color
-                int beginV = 0, endV = 0, deltaV = 0;
-                if (gradient[y][x][0] > 0 && gradient[y][x][3] > 0) {
-                    beginV = y - gradient[y][x][0];
-                    endV = y + gradient[y][x][3];
-                    if (indexed[beginV][x] != indexed[endV][x]) {
-                        deltaV = endV - beginV;
-                    }
-                }
-                int beginH = 0, endH = 0, deltaH = 0;
-                if (gradient[y][x][1] > 0 && gradient[y][x][2] > 0) {
-                    beginH = x - gradient[y][x][1];
-                    endH = x + gradient[y][x][2];
-                    if (indexed[y][beginH] != indexed[y][endH]) {
-                        deltaH = endH - beginH;
-                    }
-                }
-
-                if (deltaV > 0 || deltaH > 0) {
-                    mapping.pixelIndexes[width * y + x] = smoothPickColor(indexed, gradient, x,y, mapping.colorTable);
-                }
-                // mapping.pixelIndexes[width * y + x] = (byte) (139 & 0xff);
+                if (gradientArea[y][x]>=0)
+                    mapping.pixelIndexes[width * y + x] = (byte) ((139+gradientArea[y][x]) & 0xff);
             }
         }
-
-
-
-
     }
 
     /**
@@ -197,6 +178,25 @@ public class ColorSimuMapper extends BaseColorMapper {
         }
 
         return count;
+    }
+
+    /**
+     * mark all pixels in the same gradient area
+     *
+     * @param gradientArea mark
+     * @param x            current x
+     * @param y            current y
+     * @param mark         mark id
+     */
+    private void markGradientArea(int[][][] gradient, int[][] gradientArea, int x, int y, int mark) {
+        if (gradientArea[y][x] >= 0) return; // already marked
+        gradientArea[y][x] = mark;
+        for (int xx = x - gradient[y][x][1]; xx <= x + gradient[y][x][2]; xx++) {
+            markGradientArea(gradient, gradientArea, xx, y, mark);
+        }
+        for (int yy = y - gradient[y][x][0]; yy <= y + gradient[y][x][3]; yy++) {
+            markGradientArea(gradient, gradientArea, x, yy, mark);
+        }
     }
 
     /**
@@ -285,10 +285,10 @@ public class ColorSimuMapper extends BaseColorMapper {
     private byte smoothPickColor(byte[][] indexed, int[][][] gradient, int x, int y, Color[] ctable) {
         ArrayList<Color> colors = new ArrayList<>();
         for (int xx = x - gradient[y][x][1]; xx <= x + gradient[y][x][2]; xx++) {
-            colors.add(ctable[indexed[y][xx]&0xff]);
+            colors.add(ctable[indexed[y][xx] & 0xff]);
         }
         for (int yy = y - gradient[y][x][0]; yy <= y + gradient[y][x][3]; yy++) {
-            colors.add(ctable[indexed[yy][x]&0xff]);
+            colors.add(ctable[indexed[yy][x] & 0xff]);
         }
 
         Color color = getMedianColor(colors);
