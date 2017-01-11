@@ -56,6 +56,44 @@ public class ColorSimuMapper extends BaseColorMapper {
         return center;
     }
 
+    /**
+     * a - b
+     */
+    private static ColorSub sub(Color a, Color b) {
+        ColorSub result = new ColorSub();
+        result.R = a.getRed() - b.getRed();
+        result.G = a.getGreen() - b.getGreen();
+        result.B = a.getBlue() - b.getBlue();
+        result.A = a.getAlpha() - b.getAlpha();
+        return result;
+    }
+
+    /**
+     * a + (sub * num / den)
+     */
+    private static Color add(Color a, ColorSub sub, int num, int den) {
+        int R = a.getRed() + sub.R * num / den;
+        int G = a.getGreen() + sub.G * num / den;
+        int B = a.getBlue() + sub.B * num / den;
+        int A = a.getAlpha() + sub.A * num / den;
+
+        R = R > 255 ? 255 : R;
+        G = G > 255 ? 255 : G;
+        B = B > 255 ? 255 : B;
+        A = A > 255 ? 255 : A;
+        R = R < 0 ? 0 : R;
+        G = G < 0 ? 0 : G;
+        B = B < 0 ? 0 : B;
+        A = A < 0 ? 0 : A;
+
+        return new Color(
+                R,
+                G,
+                B,
+                A
+        );
+    }
+
     @Override
     protected void genIndexedImage(Color[] pixels, int height, Map<Color, Color> colorMap, HashMap<Color, Integer> colorIndex, Mapping mapping) {
         super.genIndexedImage(pixels, height, colorMap, colorIndex, mapping);
@@ -105,7 +143,7 @@ public class ColorSimuMapper extends BaseColorMapper {
             }
         }
 
-        // gradient detection
+        // gradient area detection
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 // select max length gradient direction, and the start color not equals the end color
@@ -113,19 +151,40 @@ public class ColorSimuMapper extends BaseColorMapper {
                 for (int d : gradient[y][x]) delta += d;
 
                 int mark = -1;
-                if (delta > 3 ) {
+                if (delta > 3) {
                     markGradientArea(gradient, gradientArea, x, y, ++mark);
                 }
             }
         }
 
-
+        Color[][] dither = new Color[height][width];
+        for (int i = 0; i < dither.length; i++) {
+            System.arraycopy(orig[i], 0, dither[i], 0, orig[0].length);
+        }
+        // do Floyd-Steinberg dithering
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                if (gradientArea[y][x] >= 0)
-                    mapping.pixelIndexes[width * y + x] = (byte) ((200 + gradientArea[y][x]) & 0xff);
+                if (gradientArea[y][x] < 0) continue;
+                //if (x < 1 || y < 1 || x == width - 1 || y == height - 1) continue;
+                Color cOld = dither[y][x];
+                byte bNew = pickNearestColor(mapping.colorTable, cOld);
+                Color cNew = mapping.colorTable[bNew & 0xff];
+                ColorSub sub = sub(cOld, cNew);
+                dither[y][x + 1] = add(dither[y][x + 1], sub, 7, 16);
+                dither[y + 1][x - 1] = add(dither[y + 1][x - 1], sub, 3, 16);
+                dither[y + 1][x] = add(dither[y + 1][x], sub, 5, 16);
+                dither[y + 1][x + 1] = add(dither[y + 1][x + 1], sub, 1, 16);
+                mapping.pixelIndexes[width * y + x] = bNew;
             }
         }
+
+
+//        for (int y = 0; y < height; y++) {
+//            for (int x = 0; x < width; x++) {
+//                if (gradientArea[y][x] >= 0)
+//                    mapping.pixelIndexes[width * y + x] = (byte) ((200 + gradientArea[y][x]) & 0xff);
+//            }
+//        }
     }
 
     /**
@@ -288,7 +347,22 @@ public class ColorSimuMapper extends BaseColorMapper {
         }
 
         return (byte) (idx & 0xff);
+    }
 
+    /**
+     * find nearest color index from color table
+     */
+    private byte pickNearestColor(Color[] colorTable, Color color) {
+        int dist = Integer.MAX_VALUE;
+        int idx = 0;
+        for (int i = 0; i < colorTable.length; i++) {
+            int dis = ColorUtils.distance(colorTable[i], color);
+            if (dis < dist) {
+                dist = dis;
+                idx = i;
+            }
+        }
+        return (byte) (idx & 0xff);
     }
 
     protected void olgGenIndexedImage(Color[] pixels, int height, Map<Color, Color> colorMap, HashMap<Color, Integer> colorIndex, Mapping mapping) {
@@ -351,5 +425,12 @@ public class ColorSimuMapper extends BaseColorMapper {
                 }
             }
         }
+    }
+
+    private static class ColorSub {
+        int R;
+        int G;
+        int B;
+        int A;
     }
 }
