@@ -151,7 +151,7 @@ public class ColorSimuMapper extends BaseColorMapper {
                 for (int d : gradient[y][x]) delta += d;
 
                 int mark = -1;
-                if (delta > 3) {
+                if (delta > 4) {
                     markGradientArea(gradient, gradientArea, x, y, ++mark);
                 }
             }
@@ -170,10 +170,11 @@ public class ColorSimuMapper extends BaseColorMapper {
                 byte bNew = pickNearestColor(mapping.colorTable, cOld);
                 Color cNew = mapping.colorTable[bNew & 0xff];
                 ColorSub sub = sub(cOld, cNew);
-                dither[y][x + 1] = add(dither[y][x + 1], sub, 7, 16);
-                dither[y + 1][x - 1] = add(dither[y + 1][x - 1], sub, 3, 16);
-                dither[y + 1][x] = add(dither[y + 1][x], sub, 5, 16);
-                dither[y + 1][x + 1] = add(dither[y + 1][x + 1], sub, 1, 16);
+
+                if (gradientArea[y][x + 1] >= 0) dither[y][x + 1] = add(dither[y][x + 1], sub, 7, 16);
+                if (gradientArea[y + 1][x - 1] >= 0) dither[y + 1][x - 1] = add(dither[y + 1][x - 1], sub, 3, 16);
+                if (gradientArea[y + 1][x] >= 0) dither[y + 1][x] = add(dither[y + 1][x], sub, 5, 16);
+                if (gradientArea[y + 1][x + 1] >= 0) dither[y + 1][x + 1] = add(dither[y + 1][x + 1], sub, 1, 16);
                 mapping.pixelIndexes[width * y + x] = bNew;
             }
         }
@@ -235,10 +236,10 @@ public class ColorSimuMapper extends BaseColorMapper {
     private void markGradientArea(int[][][] gradient, int[][] gradientArea, int x, int y, int mark) {
         if (gradientArea[y][x] >= 0) return; // already marked
         gradientArea[y][x] = mark;
-        for (int xx = x - gradient[y][x][1]; xx <= x + gradient[y][x][2]; xx++) {
+        for (int xx = x - gradient[y][x][1] + 1; xx < x + gradient[y][x][2]; xx++) {
             markGradientArea(gradient, gradientArea, xx, y, mark);
         }
-        for (int yy = y - gradient[y][x][0]; yy <= y + gradient[y][x][3]; yy++) {
+        for (int yy = y - gradient[y][x][0] + 1; yy < y + gradient[y][x][3]; yy++) {
             markGradientArea(gradient, gradientArea, x, yy, mark);
         }
     }
