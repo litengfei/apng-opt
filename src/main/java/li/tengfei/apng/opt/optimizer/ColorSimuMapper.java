@@ -150,7 +150,7 @@ public class ColorSimuMapper extends BaseColorMapper {
                 }
 
                 if (deltaV > 0 || deltaH > 0) {
-                    smoothPickColor(indexed, gradient, x,y, mapping.colorTable);
+                    mapping.pixelIndexes[width * y + x] = smoothPickColor(indexed, gradient, x,y, mapping.colorTable);
                 }
                 // mapping.pixelIndexes[width * y + x] = (byte) (139 & 0xff);
             }
