@@ -109,36 +109,21 @@ public class ColorSimuMapper extends BaseColorMapper {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 // select max length gradient direction, and the start color not equals the end color
-                int beginV = 0, endV = 0, deltaV = 0;
-                if (gradient[y][x][0] > 0 && gradient[y][x][3] > 0) {
-                    beginV = y - gradient[y][x][0];
-                    endV = y + gradient[y][x][3];
-                    if (indexed[beginV][x] != indexed[endV][x]) {
-                        deltaV = endV - beginV;
-                    }
-                }
-                int beginH = 0, endH = 0, deltaH = 0;
-                if (gradient[y][x][1] > 0 && gradient[y][x][2] > 0) {
-                    beginH = x - gradient[y][x][1];
-                    endH = x + gradient[y][x][2];
-                    if (indexed[y][beginH] != indexed[y][endH]) {
-                        deltaH = endH - beginH;
-                    }
-                }
+                int delta = 0;
+                for (int d : gradient[y][x]) delta += d;
 
                 int mark = -1;
-                if (deltaV > 0 || deltaH > 0) {
+                if (delta > 3 ) {
                     markGradientArea(gradient, gradientArea, x, y, ++mark);
                 }
-                // mapping.pixelIndexes[width * y + x] = (byte) (139 & 0xff);
             }
         }
 
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                if (gradientArea[y][x]>=0)
-                    mapping.pixelIndexes[width * y + x] = (byte) ((139+gradientArea[y][x]) & 0xff);
+                if (gradientArea[y][x] >= 0)
+                    mapping.pixelIndexes[width * y + x] = (byte) ((200 + gradientArea[y][x]) & 0xff);
             }
         }
     }
