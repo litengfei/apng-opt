@@ -49,6 +49,8 @@ public class PngImageEncoder {
     public ArrayList<PngChunkData> encode(byte[] pixelIndexes, final int height, Color[] colorTable) {
         if (pixelIndexes.length % height != 0)
             throw new IllegalFormatFlagsException("pixels % height != 0, not a legal image");
+        if (colorTable.length > 256)
+            throw new IllegalFormatFlagsException("only support max 256 colors table");
         final int width = pixelIndexes.length / height;
 
         // calculate bitDepth
@@ -99,9 +101,38 @@ public class PngImageEncoder {
 
             data[i] = dataByte;
         }
-        return encode(pixelIndexes.length / height, height, bitDepth, data, colorTable);
+//        data = filterOpt(data, rowBytes, height);
+//        data = filterOpt(data, rowBytes, height);
+//        data = filterOpt(data, rowBytes, height);
+        return encode(width, height, bitDepth, data, colorTable);
     }
 
+    private byte[] filterOpt(byte[] noFilterImgData, int rowBytes, int height) {
+        byte[] out = new byte[noFilterImgData.length];
+        byte[] zbuf = new byte[noFilterImgData.length];
+        System.arraycopy(noFilterImgData, 0, out, 0, noFilterImgData.length);
+        for (int y = 0; y < height; y++) {
+            int pos = y * rowBytes;
+            int min = Integer.MAX_VALUE;
+            byte bestFilter = 0;
+            for (byte filter = 0; filter < PngFilters.filters.length; filter++) {
+                out[pos] = (byte) (filter & 0xff);
+                PngFilters.filt(noFilterImgData, out, pos, rowBytes, 1);
+                int sz = zlibCompress(out, zbuf);
+                if (sz < min) {
+                    min = sz;
+                    bestFilter = filter;
+                }
+            }
+
+            if (out[pos] != bestFilter) {
+                out[pos] = (byte) (bestFilter & 0xff);
+                PngFilters.filt(noFilterImgData, out, pos, rowBytes, 1);
+            }
+        }
+
+        return out;
+    }
 
     /**
      * encode image into indexed ColorType chunks: IDHR + PLTE [ + TRNS ] IDAT

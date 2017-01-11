@@ -9,7 +9,7 @@ import static java.lang.Math.abs;
  * @since 16/12/29, 下午2:26
  */
 public class PngFilters {
-    private static Filter[] filters = {
+    public static final Filter[] filters = {
             new Filter(),
             new FilterSub(),
             new FilterUp(),
@@ -18,7 +18,7 @@ public class PngFilters {
     };
 
     /**
-     * filter operate
+     * filter operate on a row
      *
      * @param in         input bytes
      * @param out        output bytes
@@ -28,11 +28,11 @@ public class PngFilters {
      */
     public static void filt(byte[] in, byte[] out,
                             int pos, int rowBytes, int pixelBytes) {
-        filters[in[pos]].filt(in, out, pos, rowBytes, pixelBytes);
+        filters[out[pos]].filt(in, out, pos, rowBytes, pixelBytes);
     }
 
     /**
-     * Reconstruct operate
+     * Reconstruct operate on a row
      *
      * @param in         input bytes
      * @param out        output bytes
@@ -45,7 +45,7 @@ public class PngFilters {
         filters[in[pos]].recon(in, out, pos, rowBytes, pixelBytes);
     }
 
-    private static class Filter {
+    static class Filter {
         void filt(byte[] in, byte[] out,
                   int pos, final int rowBytes, final int pixelBytes) {
             boolean firstScanLine = pos < rowBytes;
