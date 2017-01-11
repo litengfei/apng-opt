@@ -1,6 +1,7 @@
 package li.tengfei.apng.opt.optimizer;
 
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -33,6 +34,27 @@ public class ColorSimuMapper extends BaseColorMapper {
     private byte[] mCacheColors = {};
     private int mCacheCount = 0;
 
+    /**
+     * get MedianColor of the colors
+     */
+    private static Color getMedianColor(java.util.List<Color> colors) {
+        long R = 0, G = 0, B = 0, A = 0, W = 0;
+        // compute center a,r,g,b
+        for (Color color : colors) {
+            R += color.getRed();
+            G += color.getGreen();
+            B += color.getBlue();
+            A += color.getAlpha();
+            W++;
+        }
+
+        Color center = new Color(
+                Math.round(R / W),
+                Math.round(G / W),
+                Math.round(B / W),
+                Math.round(A / W));
+        return center;
+    }
 
     @Override
     protected void genIndexedImage(Color[] pixels, int height, Map<Color, Color> colorMap, HashMap<Color, Integer> colorIndex, Mapping mapping) {
@@ -105,6 +127,38 @@ public class ColorSimuMapper extends BaseColorMapper {
                 // mapping.pixelIndexes[width * y + x] = (byte) (139 & 0xff);
             }
         }
+
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                // select max length gradient direction, and the start color not equals the end color
+                int beginV = 0, endV = 0, deltaV = 0;
+                if (gradient[x][y][0] > 0 && gradient[x][y][3] > 0) {
+                    beginV = y - gradient[x][y][0];
+                    endV = y + gradient[x][y][3];
+                    if (indexed[x][beginV] != indexed[x][endV]) {
+                        deltaV = endV - beginV;
+                    }
+                }
+                int beginH = 0, endH = 0, deltaH = 0;
+                if (gradient[x][y][1] > 0 && gradient[x][y][2] > 0) {
+                    beginH = x - gradient[x][y][1];
+                    endH = x + gradient[x][y][2];
+                    if (indexed[beginH][y] != indexed[endH][y]) {
+                        deltaH = endH - beginH;
+                    }
+                }
+
+                if (deltaV > 0 || deltaH > 0) {
+                    smoothPickColor(indexed, gradient, x,y, mapping.colorTable);
+                }
+                // mapping.pixelIndexes[width * y + x] = (byte) (139 & 0xff);
+            }
+        }
+
+
+
+
     }
 
     /**
@@ -172,7 +226,6 @@ public class ColorSimuMapper extends BaseColorMapper {
         return dR * dR + dG * dG + dB * dB + dA * dA < GRADIENT_DELTA;
     }
 
-
     private void initCache(int width, int height) {
         int i = width > height ? width : height;
         if (i > mCacheColors.length) {
@@ -228,6 +281,29 @@ public class ColorSimuMapper extends BaseColorMapper {
         }
     }
 
+    private byte smoothPickColor(byte[][] indexed, int[][][] gradient, int x, int y, Color[] ctable) {
+        ArrayList<Color> colors = new ArrayList<>();
+        for (int xx = x - gradient[x][y][1]; xx <= x + gradient[x][y][2]; xx++) {
+            colors.add(ctable[indexed[xx][y]&0xff]);
+        }
+        for (int yy = y - gradient[x][y][0]; yy <= y + gradient[x][y][3]; yy++) {
+            colors.add(ctable[indexed[x][yy]&0xff]);
+        }
+
+        Color color = getMedianColor(colors);
+        int dist = Integer.MAX_VALUE;
+        int idx = 0;
+        for (int i = 0; i < ctable.length; i++) {
+            int dis = ColorUtils.distance(ctable[i], color);
+            if (dis < dist) {
+                dist = dis;
+                idx = i;
+            }
+        }
+
+        return (byte) (idx & 0xff);
+
+    }
 
     protected void olgGenIndexedImage(Color[] pixels, int height, Map<Color, Color> colorMap, HashMap<Color, Integer> colorIndex, Mapping mapping) {
         super.genIndexedImage(pixels, height, colorMap, colorIndex, mapping);

@@ -64,8 +64,7 @@ public class PngOptimizer {
     private ArrayList<PngChunkData> colorReduce(ArrayList<PngChunkData> chunks) throws DataFormatException {
 
         ArrayList<PngImage> images = decoder.decodeImages(chunks);
-        KMeansReducer reducer = new KMeansReducer();
-        reducer.setInitReducer(new MedianCutReducer());
+        MedianCutReducer reducer = new MedianCutReducer();
 
         ArrayList<PngChunkData> newChunks = new ArrayList<>();
 
