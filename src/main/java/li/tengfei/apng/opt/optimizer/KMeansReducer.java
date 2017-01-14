@@ -222,10 +222,11 @@ public class KMeansReducer implements ColorReducer {
         }
 
         // get the longest distance two color
-        int maxDist = 0, maxX = 0, maxY = 0;
+        double maxDist = 0;
+        int maxX = 0, maxY = 0;
         for (int x = 0; x < subColors.length; x++) {
             for (int y = x + 1; y < subColors.length; y++) {
-                int dist = distance(subColors[x], subColors[y]);
+                double dist = distance(subColors[x], subColors[y]);
                 if (dist > maxDist) {
                     maxDist = dist;
                     maxX = x;
@@ -279,16 +280,16 @@ public class KMeansReducer implements ColorReducer {
                     (int) Math.round(B / W),
                     (int) Math.round(A / W));
 
-            Color center = centers[i];
-            int minDist = Integer.MAX_VALUE;
-            for (int j = 0; j < colors.length; j++) {
-                if (indexes[j] != i) continue;
-                int dist = distance(vCenter, colors[j]);
-                if (dist < minDist) {
-                    minDist = dist;
-                    center = colors[j];
-                }
-            }
+            Color center = vCenter;
+//            int minDist = Integer.MAX_VALUE;
+//            for (int j = 0; j < colors.length; j++) {
+//                if (indexes[j] != i) continue;
+//                int dist = distance(vCenter, colors[j]);
+//                if (dist < minDist) {
+//                    minDist = dist;
+//                    center = colors[j];
+//                }
+//            }
 
             if (!center.equals(centers[i])) {
                 changed++;
@@ -310,11 +311,11 @@ public class KMeansReducer implements ColorReducer {
     private int cluster(Color[] colors, Color[] centers, int[] indexes) {
         int changed = 0;
         for (int i = 0; i < colors.length; i++) {
-            int minDist = Integer.MAX_VALUE;
+            double minDist = Double.MAX_VALUE;
             int minIdx = 0;
 
             for (int j = 0; j < centers.length; j++) {
-                int dist = distance(colors[i], centers[j]);
+                double dist = distance(colors[i], centers[j]);
                 if (dist < minDist) {
                     minDist = dist;
                     minIdx = j;

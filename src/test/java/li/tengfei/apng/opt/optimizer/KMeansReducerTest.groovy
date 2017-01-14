@@ -20,7 +20,7 @@ class KMeansReducerTest {
         MedianCutReducer medianCut = new MedianCutReducer()
         KMeansReducer kmeans = new KMeansReducer()
 
-        while (target <= 2048) {
+        while (target <= 256) {
             reduce(medianCut, target, "medianCut")
             kmeans.initReducer = null
             reduce(kmeans, target, "kmeans")
