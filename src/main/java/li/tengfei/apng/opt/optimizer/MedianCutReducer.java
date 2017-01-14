@@ -21,12 +21,12 @@ public class MedianCutReducer implements ColorReducer {
      * Cut Ranking, the biggest one is cut first
      */
     private static long ranking(NColor[] colors) {
-        double dists = 0;
+        long dists = 0;
         Color center = getMedianColor(colors);
         for (NColor color : colors) {
             dists += Math.sqrt(distance(color, center)) * color.count;
         }
-        return (long)dists;
+        return (dists);
     }
 
     /**

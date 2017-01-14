@@ -337,10 +337,10 @@ public class ColorSimuMapper extends BaseColorMapper {
         }
 
         Color color = getMedianColor(colors);
-        double dist = Double.MAX_VALUE;
+        int dist = Integer.MAX_VALUE;
         int idx = 0;
         for (int i = 0; i < ctable.length; i++) {
-            double dis = ColorUtils.distance(ctable[i], color);
+            int dis = ColorUtils.distance(ctable[i], color);
             if (dis < dist) {
                 dist = dis;
                 idx = i;
@@ -354,10 +354,10 @@ public class ColorSimuMapper extends BaseColorMapper {
      * find nearest color index from color table
      */
     private byte pickNearestColor(Color[] colorTable, Color color) {
-        double dist = Double.MAX_VALUE;
+        int dist = Integer.MAX_VALUE;
         int idx = 0;
         for (int i = 0; i < colorTable.length; i++) {
-            double dis = ColorUtils.distance(colorTable[i], color);
+            int dis = ColorUtils.distance(colorTable[i], color);
             if (dis < dist) {
                 dist = dis;
                 idx = i;
@@ -385,8 +385,7 @@ public class ColorSimuMapper extends BaseColorMapper {
                 int xl = 0 < x - R ? x - R : 0;
                 int xh = width - 1 < x + R ? width - 1 : x + R;
 
-                int count = 0;
-                double distSum = 0;
+                int count = 0, distSum = 0;
                 for (int yy = yl; yy < yh; yy++) {
                     for (int xx = xl; xx < xh; xx++) {
                         // calculate circle range
@@ -398,7 +397,7 @@ public class ColorSimuMapper extends BaseColorMapper {
                     }
                 }
 
-                double distAvg = distSum / count + 1;
+                int distAvg = distSum / count + 1;
                 int i = 0;
                 for (int yy = yl; yy < yh; yy++) {
                     for (int xx = xl; xx < xh; xx++) {
@@ -406,7 +405,7 @@ public class ColorSimuMapper extends BaseColorMapper {
                         if ((xx - x) * (xx - x) + (yy - y) * (yy - y) > R * R) continue;
                         int pb = yy * width + xx;
                         Color B = pixels[pb];
-                        double dist = ColorUtils.distance(A, B);
+                        int dist = ColorUtils.distance(A, B);
                         if (dist > distAvg || dist > MAX_DIST) continue;
                         centers[i] = indexes[pb];
                         dists[i++] = (R * R) / ((xx - x) * (xx - x) + (yy - y) * (yy - y) + 1);
