@@ -24,7 +24,7 @@ public class MedianCutReducer implements ColorReducer {
         long dists = 0;
         Color center = getMedianColor(colors);
         for (NColor color : colors) {
-            dists += Math.sqrt(distance(color, center)) * color.count;
+            dists += distance(color, center) * Math.sqrt(color.count);
         }
         return (dists);
     }
@@ -56,7 +56,7 @@ public class MedianCutReducer implements ColorReducer {
         // calculate channel distances
         for (NColor color : colors) {
             for (int i = 0; i < COLOR_BYTES; i++) {
-                channelDists[i] += Math.round(Math.abs((getChannelValue(color, i) - channelAvgs[i])) * color.count);
+                channelDists[i] += Math.round(Math.abs((getChannelValue(color, i) - channelAvgs[i]) * Math.sqrt(color.count)));
             }
         }
 

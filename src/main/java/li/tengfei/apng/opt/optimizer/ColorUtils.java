@@ -16,13 +16,14 @@ public class ColorUtils {
     public static int distance(Color a, Color b) {
         int dist = 0;
         int delta = a.getRed() - b.getRed();
-        dist += delta * delta;
+        dist += delta * delta * 3;
         delta = a.getGreen() - b.getGreen();
-        dist += delta * delta;
+        dist += delta * delta * 3;
         delta = a.getBlue() - b.getBlue();
-        dist += delta * delta;
+        dist += delta * delta * 3;
         delta = a.getAlpha() - b.getAlpha();
         dist += delta * delta;
+        dist *= 1 + Math.round(Math.sqrt(a.getAlpha() + b.getAlpha()));
         return dist;
     }
 
